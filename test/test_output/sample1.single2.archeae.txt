@@ -1,0 +1,49 @@
+# hmmsearch :: search profile(s) against a sequence database
+# HMMER 3.0 (March 2010); http://hmmer.org/
+# Copyright (C) 2010 Howard Hughes Medical Institute.
+# Freely distributed under the GNU General Public License (GPLv3).
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# query HMM file:                  /srv/whitlam/bio/apps/12.04/sw/communityM/0.0.1/models/SSU_archaea.hmm
+# target sequence database:        ./test/sample1/single2.fna
+# output directed to file:         ./test/test_output/sample1.single2.archeae.txt
+# per-seq hits tabular output:     ./test/test_output/sample1.single2.archeae.table.txt
+# show alignments in output:       no
+# sequence reporting threshold:    E-value <= 1e-05
+# number of worker threads:        1
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+Query:       archaea  [M=1381]
+Scores for complete sequences (score includes all domains):
+   --- full sequence ---   --- best 1 domain ---    -#dom-
+    E-value  score  bias    E-value  score  bias    exp  N  Sequence                                 Description
+    ------- ------ -----    ------- ------ -----   ---- --  --------                                 -----------
+    1.7e-13   46.0   0.1    1.9e-13   45.9   0.1    1.0  1  FCC0WM1ACXX_4_1101_2867_2273#TGAATCAT/1  
+    3.5e-07   25.1   0.0    3.5e-07   25.1   0.0    1.0  1  FCC0WM1ACXX_4_1101_14994_2220#TGAATCAT/1 
+
+
+Domain annotation for each sequence:
+>> FCC0WM1ACXX_4_1101_2867_2273#TGAATCAT/1  
+   #    score  bias  c-Evalue  i-Evalue hmmfrom  hmm to    alifrom  ali to    envfrom  env to     acc
+ ---   ------ ----- --------- --------- ------- -------    ------- -------    ------- -------    ----
+   1 !   45.9   0.1   2.2e-16   1.9e-13     571     668 ..       3     100 .]       1     100 [] 0.97
+
+>> FCC0WM1ACXX_4_1101_14994_2220#TGAATCAT/1  
+   #    score  bias  c-Evalue  i-Evalue hmmfrom  hmm to    alifrom  ali to    envfrom  env to     acc
+ ---   ------ ----- --------- --------- ------- -------    ------- -------    ------- -------    ----
+   1 !   25.1   0.0   4.3e-10   3.5e-07      43      98 ..      10      99 ..       1     100 [] 0.93
+
+
+
+Internal pipeline statistics summary:
+-------------------------------------
+Query model(s):                            1  (1381 nodes)
+Target sequences:                       1666  (166600 residues)
+Passed MSV filter:                        35  (0.0210084); expected 33.3 (0.02)
+Passed bias filter:                       18  (0.0108043); expected 33.3 (0.02)
+Passed Vit filter:                         3  (0.00180072); expected 1.7 (0.001)
+Passed Fwd filter:                         2  (0.00120048); expected 0.0 (1e-05)
+Initial search space (Z):               1666  [actual number of targets]
+Domain search space  (domZ):               2  [number of targets reported over threshold]
+# CPU time: 0.05u 0.00s 00:00:00.05 Elapsed: 00:00:00.05
+# Mc/sec: 4601.49
+//

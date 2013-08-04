@@ -1,0 +1,43 @@
+# hmmsearch :: search profile(s) against a sequence database
+# HMMER 3.0 (March 2010); http://hmmer.org/
+# Copyright (C) 2010 Howard Hughes Medical Institute.
+# Freely distributed under the GNU General Public License (GPLv3).
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# query HMM file:                  /srv/whitlam/bio/apps/12.04/sw/communityM/0.0.1/models/SSU_archaea.revComp.hmm
+# target sequence database:        ./test/sample1/pair.1.fna
+# output directed to file:         ./test/test_output/sample1.pair.1.1.archeae.rev_comp.txt
+# per-seq hits tabular output:     ./test/test_output/sample1.pair.1.1.archeae.table.rev_comp.txt
+# show alignments in output:       no
+# sequence reporting threshold:    E-value <= 1e-05
+# number of worker threads:        1
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+Query:       archaea.revComp  [M=1381]
+Scores for complete sequences (score includes all domains):
+   --- full sequence ---   --- best 1 domain ---    -#dom-
+    E-value  score  bias    E-value  score  bias    exp  N  Sequence                                 Description
+    ------- ------ -----    ------- ------ -----   ---- --  --------                                 -----------
+    1.3e-16   57.3   0.0    1.4e-16   57.2   0.0    1.0  1  FCC0WM1ACXX_4_1101_19461_2484#TGAATCAT/1 
+
+
+Domain annotation for each sequence:
+>> FCC0WM1ACXX_4_1101_19461_2484#TGAATCAT/1  
+   #    score  bias  c-Evalue  i-Evalue hmmfrom  hmm to    alifrom  ali to    envfrom  env to     acc
+ ---   ------ ----- --------- --------- ------- -------    ------- -------    ------- -------    ----
+   1 !   57.2   0.0   4.2e-20   1.4e-16     610     707 ..       4     100 .]       1     100 [] 0.92
+
+
+
+Internal pipeline statistics summary:
+-------------------------------------
+Query model(s):                            1  (1381 nodes)
+Target sequences:                       3333  (333300 residues)
+Passed MSV filter:                        92  (0.0276028); expected 66.7 (0.02)
+Passed bias filter:                       45  (0.0135014); expected 66.7 (0.02)
+Passed Vit filter:                         3  (0.00090009); expected 3.3 (0.001)
+Passed Fwd filter:                         1  (0.00030003); expected 0.0 (1e-05)
+Initial search space (Z):               3333  [actual number of targets]
+Domain search space  (domZ):               1  [number of targets reported over threshold]
+# CPU time: 0.09u 0.00s 00:00:00.09 Elapsed: 00:00:00.09
+# Mc/sec: 5114.30
+//

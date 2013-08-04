@@ -1,0 +1,41 @@
+# hmmsearch :: search profile(s) against a sequence database
+# HMMER 3.0 (March 2010); http://hmmer.org/
+# Copyright (C) 2010 Howard Hughes Medical Institute.
+# Freely distributed under the GNU General Public License (GPLv3).
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# query HMM file:                  /srv/whitlam/bio/apps/12.04/sw/communityM/0.0.1/models/SSU_bacteria.revComp.hmm
+# target sequence database:        ./test/sample1/single3.fna
+# output directed to file:         ./test/test_output/sample1.single3.bacteria.rev_comp.txt
+# per-seq hits tabular output:     ./test/test_output/sample1.single3.bacteria.table.rev_comp.txt
+# show alignments in output:       no
+# sequence reporting threshold:    E-value <= 1e-05
+# number of worker threads:        1
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+Query:       bacteria.revComp  [M=1523]
+Scores for complete sequences (score includes all domains):
+   --- full sequence ---   --- best 1 domain ---    -#dom-
+    E-value  score  bias    E-value  score  bias    exp  N  Sequence Description
+    ------- ------ -----    ------- ------ -----   ---- --  -------- -----------
+
+   [No hits detected that satisfy reporting thresholds]
+
+
+Domain annotation for each sequence:
+
+   [No targets detected that satisfy reporting thresholds]
+
+
+Internal pipeline statistics summary:
+-------------------------------------
+Query model(s):                            1  (1523 nodes)
+Target sequences:                       1666  (166600 residues)
+Passed MSV filter:                        26  (0.0156062); expected 33.3 (0.02)
+Passed bias filter:                       17  (0.0102041); expected 33.3 (0.02)
+Passed Vit filter:                         2  (0.00120048); expected 1.7 (0.001)
+Passed Fwd filter:                         0  (0); expected 0.0 (1e-05)
+Initial search space (Z):               1666  [actual number of targets]
+Domain search space  (domZ):               0  [number of targets reported over threshold]
+# CPU time: 0.05u 0.00s 00:00:00.05 Elapsed: 00:00:00.04
+# Mc/sec: 6343.30
+//
