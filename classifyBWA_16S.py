@@ -33,7 +33,6 @@ __status__ = 'Development'
 import os
 import sys
 import argparse
-import tempfile
 import ntpath
 
 from readConfig import ReadConfig
@@ -43,8 +42,6 @@ import pysam
 
 class ClassifyBWA(object):
   def __init__(self):
-    self.mappingQualityThreshold = 10
-    self.minLength = 90
     self.unclassifiedId = -1
     self.unclassifiedStr = 'k__unclassified;p__unclassified;c__unclassified;o__unclassified;f__unclassified;g__unclassified;s__unclassified;id__unclassified;'
     self.ggDB = '/srv/db/gg/2013_05/gg_13_5_otus/rep_set/##_otus.fasta'
@@ -67,6 +64,7 @@ class ClassifyBWA(object):
     readsMappedTo16S_2 = {}
     for read in bam.fetch(until_eof=True):
       if read.is_secondary:
+        print read.qname
         continue
 
       bMultipleTopHits = False
@@ -87,17 +85,6 @@ class ClassifyBWA(object):
 
     bam.close()
 
-    # if one end of a read can be mapped properly, treat this classification for the pair
-    for seqId in readsMappedTo16S_1:
-      if readsMappedTo16S_1[seqId] == self.unclassifiedId:
-        seqId2 = seqId[0:-1] + '2'
-        readsMappedTo16S_1[seqId] = readsMappedTo16S_2[seqId2]
-
-    for seqId in readsMappedTo16S_2:
-      if readsMappedTo16S_2[seqId] == self.unclassifiedId:
-        seqId1 = seqId[0:-1] + '1'
-        readsMappedTo16S_2[seqId] = readsMappedTo16S_1[seqId1]
-
     return readsMappedTo16S_1, readsMappedTo16S_2
 
   def readSingleBAM(self, bamFile):
@@ -117,7 +104,7 @@ class ClassifyBWA(object):
           break
 
       if bMultipleTopHits or read.is_unmapped or (read.mapq <= self.mappingQualityThreshold) or (read.alen < self.minLength):
-        readsMappedTo16S_1[read.qname] = self.unclassifiedId
+        readsMappedTo16S[read.qname] = self.unclassifiedId
       else:
         readsMappedTo16S[read.qname] = bam.getrname(read.tid)
 
@@ -146,14 +133,23 @@ class ClassifyBWA(object):
 
       print 'Identifying 16S sequences in paired-end reads: ' + pair1 + ', ' + pair2
 
-      bamFile = ntpath.basename(pair1)
-      bamFile = prefix + '.' + bamFile[0:bamFile.rfind('.')] + '.16S.bam'
+      # write out classifications for paired-end reads with both ends identified as 16S
+      pair1Base = ntpath.basename(pair1)
+      bamFile = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.16S.bam'
       readsMappedTo16S_1, readsMappedTo16S_2  = self.readPairedBAM(bamFile)
 
-      output = prefix + '.' + pair1[pair1.rfind('/')+1:pair1.rfind('.')] + '.classified.16S.tsv'
-      print '  Classification results written to: ' + output
+      output = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.16S.tsv'
+      print '  Paired results written to: ' + output
       self.writeClassification(output, readsMappedTo16S_1, ggIdToTaxonomy)
       self.writeClassification(output, readsMappedTo16S_2, ggIdToTaxonomy, bAppend = True)
+      
+      # write out classifications for paired-ends reads with only one end identified as 16S
+      bamFile = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.16S.bam'
+      readsMappedTo16S = self.readSingleBAM(bamFile)
+      
+      output = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.16S.tsv'
+      print '  Singleton results written to: ' + output
+      self.writeClassification(output, readsMappedTo16S, ggIdToTaxonomy)
 
   def processSingles(self, singles, ggIdToTaxonomy, outputDir, prefix):
     for i in xrange(0, len(singles)):
@@ -161,17 +157,29 @@ class ClassifyBWA(object):
 
       print 'Identifying 16S sequences in single-end reads: ' + seqFile
 
-      bamFile = ntpath.basename(seqFile)
-      bamFile = prefix + '.' + bamFile[0:bamFile.rfind('.')] + '.16S.bam'
+      singleBase = ntpath.basename(seqFile)
+      bamFile = prefix + '.' + singleBase[0:singleBase.rfind('.')] + '.16S.bam'
       readsMappedTo16S = self.readSingleBAM(bamFile)
 
-      output = prefix + '.' + seqFile[seqFile.rfind('/')+1:seqFile.rfind('.')] + '.classified.16S.tsv'
+      output = prefix + '.' + singleBase[0:singleBase.rfind('.')] + '.16S.tsv'
       print '  Classification results written to: ' + output
       self.writeClassification(output, readsMappedTo16S, ggIdToTaxonomy)
 
   def run(self, configFile, otu, mappingQual, minLength, threads):
     rc = ReadConfig()
     projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = True)
+    
+    # check if classification directory already exists
+    if not os.path.exists(projectParams['output_dir'] + 'classified'):
+      os.makedirs(projectParams['output_dir'] + 'classified')
+    else:
+      rtn = raw_input('Remove previously classified reads (Y or N)? ')
+      if rtn.lower() == 'y' or rtn.lower() == 'yes':
+        files = os.listdir(projectParams['output_dir'] + 'classified')
+        for f in files:
+          os.remove(projectParams['output_dir'] + 'classified/' + f)
+      else:
+        sys.exit()
 
     self.mappingQualityThreshold = mappingQual
     self.minLength = minLength
@@ -180,46 +188,54 @@ class ClassifyBWA(object):
     ggIdToTaxonomy = self.readTaxonomy(taxonomyFile)
 
     ggDB = self.ggDB.replace('##', str(otu), 1)
-    print 'Mapping reads to the GreenGenes DB at: ' + ggDB + '\n'
+    
+    print 'Classifying reads with: ' + ggDB
+    print 'Assigning taxonomy with: ' + taxonomyFile
+    print 'Threads: ' + str(threads)
+    print ''
 
     if not os.path.exists(ggDB + '.amb'):
       print 'Indexing GreenGenes DB:'
       os.system('bwa index -a is ' + ggDB)
       print ''
-    else:
-      print 'GreenGenes DB is already indexed.\n'
 
     # map reads
     for sample in sampleParams:
-      print 'Processing sample: ' + sample
+      print 'Mapping sample: ' + sample
       outputDir = projectParams['output_dir']
-      prefix = outputDir + sample
+      inputPrefix = outputDir + 'extracted/' + sample
+      outputPrefix = outputDir + 'classified/' + sample
       pairs = sampleParams[sample]['pairs']
       singles = sampleParams[sample]['singles']
 
       for i in xrange(0, len(pairs), 2):
-        pair1 = ntpath.basename(pairs[i])
-        pair1 = prefix + '.' + pair1[0:pair1.rfind('.')] + '.1.intersect.16S.fasta'
+        pair1Base = ntpath.basename(pairs[i])
+        pair1File = inputPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.SSU.fasta'
 
-        pair2 = ntpath.basename(pairs[i+1])
-        pair2 = prefix + '.' + pair2[0:pair2.rfind('.')] + '.2.intersect.16S.fasta'
+        pair2Base = ntpath.basename(pairs[i+1])
+        pair2File = inputPrefix + '.' + pair2Base[0:pair2Base.rfind('.')] + '.intersect.SSU.fasta'
 
         bamPrefix = ntpath.basename(pairs[i])
-        bamPrefix = prefix + '.' + bamPrefix[0:bamPrefix.rfind('.')] + '.16S'
-        mapPair(ggDB, pair1, pair2, bamPrefix, threads)
-
+        bamPrefixFile = outputPrefix + '.' + bamPrefix[0:bamPrefix.rfind('.')] + '.intersect.16S'
+        mapPair(ggDB, pair1File, pair2File, bamPrefixFile, threads)
+        
+        diffFile = inputPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.SSU.fasta'
+        bamPrefixFile = outputPrefix + '.' + bamPrefix[0:bamPrefix.rfind('.')] + '.difference.16S'
+        mapSingle(ggDB, diffFile, bamPrefixFile, threads)
+        
       for i in xrange(0, len(singles)):
-        single = ntpath.basename(singles[i])
-        single = projectParams['output_dir'] + sample + '.' + single[0:single.rfind('.')] + '.16S.fasta'
+        singleBase = ntpath.basename(singles[i])
+        singleFile = inputPrefix + '.' + singleBase[0:singleBase.rfind('.')] + '.SSU.fasta'
 
-        bamPrefix = ntpath.basename(singles[i])
-        bamPrefix = projectParams['output_dir'] + sample + '.' + bamPrefix[0:bamPrefix.rfind('.')] + '.16S'
-        mapSingle(ggDB, singles[i], bamPrefix, threads)
+        bamPrefixFile = outputPrefix + '.' + singleBase[0:singleBase.rfind('.')] + '.16S'
+        mapSingle(ggDB, singleFile, bamPrefixFile, threads)
+        
+      print '************************************************************'
 
     # classify reads
     for sample in sampleParams:
-      print 'Processing sample: ' + sample
-      outputDir = projectParams['output_dir']
+      print 'Classifying sample: ' + sample
+      outputDir = projectParams['output_dir'] + 'classified/'
       prefix = outputDir + sample
       pairs = sampleParams[sample]['pairs']
       singles = sampleParams[sample]['singles']

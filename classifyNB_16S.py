@@ -30,7 +30,12 @@ __maintainer__ = 'Donovan Parks'
 __email__ = 'donovan.parks@gmail.com'
 __status__ = 'Development'
 
-import os, sys, tempfile, argparse
+import os
+import sys
+import tempfile
+import argparse
+import ntpath
+
 from readConfig import ReadConfig
 
 class Classify16S(object):
@@ -53,15 +58,27 @@ class Classify16S(object):
 
     # classify seqs
     if bQuiet:
-      rtn = os.system('mothur ' + tempFilePath + ' > /dev/null')
+      os.system('mothur ' + tempFilePath + ' > /dev/null')
     else:
-      rtn = os.system('mothur ' + tempFilePath)
+      os.system('mothur ' + tempFilePath)
 
     os.remove(tempFilePath)
 
   def run(self, configFile, db, threads, bQuiet):
     rc = ReadConfig()
     projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = True)
+    
+    # check if classification directory already exists
+    if not os.path.exists(projectParams['output_dir'] + 'classified'):
+      os.makedirs(projectParams['output_dir'] + 'classified')
+    else:
+      rtn = raw_input('Remove previously classified reads (Y or N)? ')
+      if rtn.lower() == 'y' or rtn.lower() == 'yes':
+        files = os.listdir(projectParams['output_dir'] + 'classified')
+        for f in files:
+          os.remove(projectParams['output_dir'] + 'classified/' + f)
+      else:
+        sys.exit()
 
     dbFile = self.dbFiles[db]
     taxonomyFile = self.taxonomyFiles[db]
@@ -75,18 +92,26 @@ class Classify16S(object):
     # create list of all sequence to classify
     mothurSeqFileList = ''
     for sample in sampleParams:
-      prefix = projectParams['output_dir'] + sample
+      prefix = projectParams['output_dir'] + 'extracted/' + sample
       pairs = sampleParams[sample]['pairs']
       singles = sampleParams[sample]['singles']
 
       for i in xrange(0, len(pairs), 2):
-        pair = pairs[i]
-        seqFile = prefix + '.' + pair[pair.rfind('/')+1:pair.rfind('.')] + '.all.16S.fasta'
-        mothurSeqFileList += seqFile + '-'
+        pair1Base = ntpath.basename(pairs[i])
+        pair1File = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.SSU.fasta'
+
+        pair2Base = ntpath.basename(pairs[i+1])
+        pair2File = prefix + '.' + pair2Base[0:pair2Base.rfind('.')] + '.intersect.SSU.fasta'
+
+        diffFile = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.SSU.fasta'
+        
+        mothurSeqFileList += pair1File + '-' + pair2File + '-' + diffFile + '-' 
 
       for single in singles:
-        seqFile = prefix + '.' + single[single.rfind('/')+1:single.rfind('.')] + '.all.16S.fasta'
-        mothurSeqFileList += seqFile + '-'
+        singleBase = ntpath.basename(single)
+        singleFile = prefix + '.' + singleBase[0:singleBase.rfind('.')] + '.SSU.fasta'
+        
+        mothurSeqFileList += singleFile + '-'
 
     # classify with mothur
     mothurSeqFileList = mothurSeqFileList[0:-1] # remove trailing dash
@@ -99,7 +124,8 @@ class Classify16S(object):
         inputName = filename[0:filename.rfind('.')] + '.full.wang.taxonomy'
       else:
         inputName = filename[0:filename.rfind('.')] + '.SSURef_111_NR_taxonomy.wang.taxonomy'
-      outputName = filename[0:filename.rfind('.all')] + '.classified.16S.tsv'
+      outputName = inputName.replace('/extracted/','/classified/')
+      outputName = outputName.replace('SSU.full.wang.taxonomy','16S.tsv')
       os.system('mv ' + inputName + ' ' + outputName)
       print '  ' + outputName
 

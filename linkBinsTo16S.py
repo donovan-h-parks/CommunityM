@@ -17,7 +17,6 @@
 #                                                                             #
 ###############################################################################
 
-
 """
 Link assembled 16S sequences to bins. This file makes extensive use of the pairm project.
 """
@@ -32,7 +31,6 @@ __email__ = 'donovan.parks@gmail.com'
 __status__ = 'Development'
 
 import os
-import sys
 import argparse
 
 from readConfig import ReadConfig
@@ -55,18 +53,18 @@ class LinkBinsTo16S(object):
 
       # determine links between 16S reads to reference sequences and assembled 16S sequences
       print '\nMapping 16S reads to reference and assembled 16S sequences.'
-      rtn = os.system('mapReads.py -t ' + str(threads) + ' ' + combinedFile + ' ' + reads16S_1 + ' ' + reads16S_2)
+      os.system('mapReads.py -t ' + str(threads) + ' ' + combinedFile + ' ' + reads16S_1 + ' ' + reads16S_2)
 
       print '\nCreating graph showing linked 16S reads.'
       bamFile = combinedFile[0:combinedFile.rfind('.')] + '.bam'
       graphFile = prefix + '.' + pair1[pair1.rfind('/')+1:pair1.rfind('.')] + '.gdf'
-      rtn = os.system('createPairedEndGraph.py ' + bamFile + ' ' + binDir + ' ' + graphFile)
+      os.system('createPairedEndGraph.py ' + bamFile + ' ' + binDir + ' ' + graphFile)
       print '  Graph written to: ' + graphFile
 
       print '\nTabulating links.'
       linkFile = prefix + '.linkedUnbinnedContigs.tsv'
-      rtn = os.system('associateUnbinnedSeqs.py ' + graphFile + ' ' + linkFile)
-      print '  Writting linked 16S reads to: ' + linkFile
+      os.system('associateUnbinnedSeqs.py ' + graphFile + ' ' + linkFile)
+      print '  Writing linked 16S reads to: ' + linkFile
 
   def run(self, configFile, contigFile, assemblies16S, binDir, threads):
     rc = ReadConfig()

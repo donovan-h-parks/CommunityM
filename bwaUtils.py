@@ -30,13 +30,12 @@ __maintainer__ = 'Donovan Parks'
 __email__ = 'donovan.parks@gmail.com'
 __status__ = 'Development'
 
-import sys
 import os
 import tempfile
 
 def mapPair(db, file1, file2, bamPrefix, threads):
-  tmpFD, tmpAlnFile1 = tempfile.mkstemp()
-  tmpFD, tmpAlnFile2 = tempfile.mkstemp()
+  _, tmpAlnFile1 = tempfile.mkstemp()
+  _, tmpAlnFile2 = tempfile.mkstemp()
 
   print 'Processing pair: ' + file1 + ', ' + file2
 
@@ -47,7 +46,7 @@ def mapPair(db, file1, file2, bamPrefix, threads):
 
   print ''
   print 'Mapping reads:'
-  os.system('bwa sampe ' + db + ' ' + tmpAlnFile1 + ' ' + tmpAlnFile2 + ' ' + file1 + ' ' + file2 + '| samtools view -SubhF 4 - | samtools sort - ' + bamPrefix)
+  os.system('bwa sampe ' + db + ' ' + tmpAlnFile1 + ' ' + tmpAlnFile2 + ' ' + file1 + ' ' + file2 + '| samtools view -Subh - | samtools sort - ' + bamPrefix)
 
   print ''
   print 'Indexing BAM file.'
@@ -58,7 +57,7 @@ def mapPair(db, file1, file2, bamPrefix, threads):
   os.remove(tmpAlnFile2)
 
 def mapSingle(db, filename, bamPrefix, threads):
-  tmpFD, tmpAlnFile = tempfile.mkstemp()
+  _, tmpAlnFile = tempfile.mkstemp()
 
   print 'Processing single-ended read file: ' + filename
 
@@ -68,7 +67,7 @@ def mapSingle(db, filename, bamPrefix, threads):
 
   print ''
   print 'Mapping reads:'
-  os.system('bwa samse ' + db + ' ' + tmpAlnFile + ' ' + filename + '| samtools view -SubhF 4 - | samtools sort - ' + bamPrefix)
+  os.system('bwa samse ' + db + ' ' + tmpAlnFile + ' ' + filename + '| samtools view -Subh - | samtools sort - ' + bamPrefix)
 
   print ''
   print 'Indexing BAM file.'

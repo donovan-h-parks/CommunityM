@@ -31,16 +31,13 @@ __email__ = "donovan.parks@gmail.com"
 __status__ = "Development"
 
 import sys
-import os
 import argparse
-import time
 import ntpath
 
 from readConfig import ReadConfig
 from seqUtils import extractSeqs
 
 import pysam
-from numpy import mean, std
 
 class ExtractBWA(object):
   def __init__(self):

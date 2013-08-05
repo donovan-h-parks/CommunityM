@@ -17,7 +17,6 @@
 #                                                                             #
 ###############################################################################
 
-
 """
 Extract reads mapped to contigs.
 """
@@ -31,7 +30,7 @@ __maintainer__ = 'Donovan Parks'
 __email__ = 'donovan.parks@gmail.com'
 __status__ = 'Development'
 
-import os, sys, argparse
+import os, argparse
 import pysam
 
 class MapReads(object):

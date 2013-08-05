@@ -17,7 +17,6 @@
 #                                                                             #
 ###############################################################################
 
-
 """
 Plot hierarchically clustered heatmap from BIOM table.
 """

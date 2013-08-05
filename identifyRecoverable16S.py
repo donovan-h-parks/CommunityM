@@ -17,7 +17,6 @@
 #                                                                             #
 ###############################################################################
 
-
 """
 Create files containing 16S reads inferred to be from the same gene.
 """
@@ -35,6 +34,7 @@ import os
 import sys
 import argparse
 import operator
+import ntpath
 
 from readConfig import ReadConfig
 from seqUtils import extractReads
@@ -309,7 +309,7 @@ class IdentifyRecoverable16S(object):
 
     seqsInFiles = self.extractClusteredReads(ggClusters, referenceSeqHits, minSeqCutoff)
 
-    # write out clusters containing a sufficent number of hits
+    # write out clusters containing a sufficient number of hits
     if not self.bQuiet:
       print 'Writing out reads belonging to putative 16S genes: '
 
@@ -375,16 +375,16 @@ class IdentifyRecoverable16S(object):
     neighbours = self.getNeighbours(ggRefDistFile, seqIdentityThreshold)
 
     # create directory to store putative 16S genes
-    dirPutative16S = projectParams['output_dir'] + 'putative16S/'
+    dirPutative16S = projectParams['output_dir'] + 'putativeSSU/'
     if not os.path.exists(dirPutative16S):
       os.makedirs(dirPutative16S)
     else:
       rtn = raw_input('Remove previously recovered 16S reads (Y or N)? ')
       if rtn.lower() == 'y' or rtn.lower() == 'yes':
         files = os.listdir(dirPutative16S)
-        for file in files:
-          if file.endswith('fasta'):
-            os.remove(dirPutative16S + '/' + file)
+        for f in files:
+          if f.endswith('fasta'):
+            os.remove(dirPutative16S + '/' + f)
       else:
         sys.exit()
 
@@ -394,31 +394,44 @@ class IdentifyRecoverable16S(object):
         print ''
         print sample + ':'
 
-      prefix = projectParams['output_dir'] + sample
+      extractedPrefix = projectParams['output_dir'] + 'extracted/' + sample
+      classifiedPrefix = projectParams['output_dir'] + 'classified/' + sample
       pairs = sampleParams[sample]['pairs']
       singles = sampleParams[sample]['singles']
 
       for i in xrange(0, len(pairs), 2):
-        pair = pairs[i]
-        classificationFile = prefix + '.' + pair[pair.rfind('/')+1:pair.rfind('.')] + '.classified.16S.tsv'
+        pair1Base = ntpath.basename(pairs[i])
+        pair2Base = ntpath.basename(pairs[i+1])
+        
+        classificationFile = classifiedPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.16S.tsv'
 
         if not self.bQuiet:
           print '  Processing file: ' + classificationFile
 
-        pairFile1 = prefix + '.' + pairs[i][pairs[i].rfind('/')+1:pairs[i].rfind('.')] + '.1.16S.fasta'
-        pairFile2 = prefix + '.' + pairs[i+1][pairs[i+1].rfind('/')+1:pairs[i+1].rfind('.')] + '.2.16S.fasta'
+        pairFile1 = extractedPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.SSU.fasta'
+        pairFile2 = extractedPrefix + '.' + pair2Base[0:pair2Base.rfind('.')] + '.intersect.SSU.fasta'
 
         self.identifyConsistentPairs(referenceSeqHits, pairFile1, pairFile2, classificationFile, neighbours, bPairsAsSingles, bSingleEnded)
-
+        
+        if bSingleEnded:
+          classificationFile = classifiedPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.16S.tsv'
+          
+          if not self.bQuiet:
+            print '  Processing file: ' + classificationFile
+          
+          singleFile = extractedPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.SSU.fasta'
+          self.addSingletons(referenceSeqHits, singleFile, classificationFile)
+          
       if bSingleEnded:
         for single in singles:
-          classificationFile = prefix + '.' + single[single.rfind('/')+1:single.rfind('.')] + '.classified.16S.tsv'
+          singleBase = ntpath.basename(single)
+          classificationFile = classifiedPrefix + '.' + singleBase[0:singleBase.rfind('.')] + '.16S.tsv'
 
           if not self.bQuiet:
             print '  Processing file: ' + classificationFile
 
-          singleFile = prefix + '.' + single[single.rfind('/')+1:single.rfind('.')] + '.16S.fasta'
-          singletons = self.addSingletons(referenceSeqHits, singleFile, classificationFile)
+          singleFile = extractedPrefix + '.' + singleBase[0:singleBase.rfind('.')] + '.SSU.fasta'
+          self.addSingletons(referenceSeqHits, singleFile, classificationFile)
 
     self.extractRecoverable16S(referenceSeqHits, neighbours, minSeqCutoff, dirPutative16S)
 
@@ -427,10 +440,10 @@ if __name__ == '__main__':
   parser.add_argument('config_file', help='project config file')
   parser.add_argument('otu', help='GreenGenes reference database used to classify 16S reads (choices: 94, 97, 99)', type=int, choices=[94, 97, 99])
   parser.add_argument('-i', '--seq_identity', help='sequence identity threshold for combining GreenGene hits (default = 0.03)', type=float, default=0.03)
-  parser.add_argument('-m', '--min_seqs', help='Reads required to create a putative 16S gene file (default = 200).', type=int, default = 200)
-  parser.add_argument('-p', '--pairs_as_singles', help='Treat paired reads with different classifications as singletons.', action="store_true")
-  parser.add_argument('-s', '--singletons', help='Use single-ended reads and pairs with only one mapped read', action="store_true")
-  parser.add_argument('-q', '--quiet', help='supress output', action='store_true')
+  parser.add_argument('-m', '--min_seqs', help='reads required to create a putative 16S gene file (default = 100).', type=int, default = 100)
+  parser.add_argument('-p', '--pairs_as_singles', help='treat paired reads with different classifications as singletons', action="store_true")
+  parser.add_argument('-s', '--singletons', help='use single-ended reads and pairs with only one mapped read', action="store_true")
+  parser.add_argument('-q', '--quiet', help='suppress output', action='store_true')
 
   parser.add_argument('--version', help='show version number of program', action='version', version='Identify recoverable 16S v0.0.1')
 

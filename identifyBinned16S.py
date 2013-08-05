@@ -17,7 +17,6 @@
 #                                                                             #
 ###############################################################################
 
-
 """
 Identify 16S sequences within bins.
 """
@@ -107,7 +106,6 @@ class IdentifyBinned16S(object):
       lengthNew = int(info[4])
 
       start = int(hits[seqId][2])
-      end = int(hits[seqId][3])
       length = int(hits[seqId][4])
 
       if (start >= startNew and start <= endNew) or (startNew >= start and startNew <= endNew):
@@ -132,10 +130,10 @@ class IdentifyBinned16S(object):
     # get bin id of binned contigs
     seqIdToBinId = {}
     files = os.listdir(binDir)
-    for file in files:
-      if file.endswith(extension):
-        binId = file[0:file.rfind('.')]
-        for line in open(binDir + '/' + file):
+    for f in files:
+      if f.endswith(extension):
+        binId = f[0:f.rfind('.')]
+        for line in open(binDir + '/' + f):
           if line[0] == '>':
             seqId = line[1:].split(' ')[0].strip()
             seqIdToBinId[seqId] = binId
@@ -148,7 +146,7 @@ class IdentifyBinned16S(object):
     # read HMM hits
     print 'Parsing HMM results.'
     hits = {}
-    for domain in ['archeae', 'bacteria', 'euk']:
+    for domain in ['archaea', 'bacteria', 'euk']:
       # forward hits
       seqIds = self.readHitTable(outputDir + '/identified16S' + '.' + domain + '.table.txt')
       if len(seqIds) > 0:

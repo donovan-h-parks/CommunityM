@@ -17,7 +17,6 @@
 #                                                                             #
 ###############################################################################
 
-
 """
 Use methods for reading, writing, and processing sequence files.
 """
@@ -33,18 +32,17 @@ __status__ = 'Development'
 
 import sys
 import gzip
-import fileinput
 
 def canonicalHeader(header):
   lineSplit = header[1:].rstrip().split()
   if lineSplit[0][-2] == '/':
-     # parse headers with read specified after backslash (e.g., seq001/1)
+    # parse headers with read specified after backslash (e.g., seq001/1)
     readId = lineSplit[0][0:-2]
     readNum = lineSplit[0][-1]
   elif len(lineSplit) >= 2:
-     # parse headers with read specified at start of second record (e.g., seq001 1:X:0)
-     readId = lineSplit[0]
-     readNum = int(lineSplit[1][0])
+    # parse headers with read specified at start of second record (e.g., seq001 1:X:0)
+    readId = lineSplit[0]
+    readNum = int(lineSplit[1][0])
   else:
     # assume a singleton
     readId = lineSplit[0]
@@ -107,13 +105,13 @@ def readFastq(fastqFile, seqs):
 
   return seqs
 
-def extractSeqs(file, seqIdsToExtract):
+def extractSeqs(f, seqIdsToExtract):
   ''' Sequence ids indicate the sequence from which reads were taken (i.e., do NOT contain a /1 or /2). '''
-  if file.endswith('gz'):
-    if '.fastq' in file or '.fq' in file:
-      return extractSeqsFastqGz(file, seqIdsToExtract)
+  if f.endswith('gz'):
+    if '.fastq' in f or '.fq' in f:
+      return extractSeqsFastqGz(f, seqIdsToExtract)
   else:
-    return extractSeqsFasta(file, seqIdsToExtract)
+    return extractSeqsFasta(f, seqIdsToExtract)
 
   print '[Error] Unknown file type'
   sys.exit()
@@ -168,13 +166,13 @@ def extractSeqsFasta(fastaFile, seqIdsToExtract):
   return seqs
 
 
-def extractReads(file, readIdsToExtract):
+def extractReads(f, readIdsToExtract):
   ''' Read ids identify individual reads taken from a sequence (i.e., contain a /1 or /2). '''
-  if file.endswith('gz'):
-    if '.fastq' in file or '.fq' in file:
-      return extractReadsFastqGz(file, readIdsToExtract)
+  if f.endswith('gz'):
+    if '.fastq' in f or '.fq' in f:
+      return extractReadsFastqGz(f, readIdsToExtract)
   else:
-    return extractReadsFasta(file, readIdsToExtract)
+    return extractReadsFasta(f, readIdsToExtract)
 
   print '[Error] Unknown file type'
   sys.exit()

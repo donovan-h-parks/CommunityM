@@ -31,13 +31,12 @@ __email__ = 'donovan.parks@gmail.com'
 __status__ = 'Development'
 
 import os, sys, tempfile, argparse
-from readConfig import ReadConfig
 
 class ClassifyFasta16S(object):
   def __init__(self):
     self.dbFiles = {'GG94':'/srv/db/gg/2013_05/gg_13_5_otus/rep_set_aligned/94_otus.fasta',
                       'GG97':'/srv/db/gg/2013_05/gg_13_5_otus/rep_set_aligned/97_otus.fasta',
-                      'GG99':'/srv/db/gg/2013_05/gg_13_5_otus/rep_set_aligned/99_otus.fasta,
+                      'GG99':'/srv/db/gg/2013_05/gg_13_5_otus/rep_set_aligned/99_otus.fasta',
                       'SILVA98':'/srv/whitlam/bio/db/mothur/silva/SSURef_111_NR_trunc.fna' }
 
     self.taxonomyFiles = {'GG94':'/srv/db/gg/2013_05/gg_13_5_otus/taxonomy/94_otu_taxonomy.full.txt',
@@ -53,9 +52,9 @@ class ClassifyFasta16S(object):
 
     # classify seqs
     if bQuiet:
-      rtn = os.system('mothur ' + tempFilePath + ' > /dev/null')
+      os.system('mothur ' + tempFilePath + ' > /dev/null')
     else:
-      rtn = os.system('mothur ' + tempFilePath)
+      os.system('mothur ' + tempFilePath)
 
     os.remove(tempFilePath)
 
@@ -96,8 +95,6 @@ if __name__ == '__main__':
   parser.add_argument('--db', help='database to use for classification (choices: GG94, GG97, GG99, SILVA98)', choices=['GG94', 'GG97', 'GG99', 'SILVA98'], default='GG97')
   parser.add_argument('-t', '--threads', help='number of threads', type=int, default=1)
   parser.add_argument('-q', '--quiet', help='supress all output', action='store_true')
-
-  parser.add_argument('--version', help='Show version number of program', action='version', version='Classify 16S using NB v0.0.1')
 
   args = parser.parse_args()
 

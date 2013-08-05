@@ -58,7 +58,7 @@ class AssemblePutative16S(object):
 
   def run(self, configFile, threads):
     rc = ReadConfig()
-    projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = True)
+    projectParams, _ = rc.readConfig(configFile, outputDirExists = True)
 
     # create directory to store putative 16S genes
     dirPutative16S = projectParams['output_dir'] + 'putative16S/'
@@ -69,9 +69,9 @@ class AssemblePutative16S(object):
     # extract GreenGene Ids of putative 16S genes
     ggIds = set()
     files = os.listdir(dirPutative16S)
-    for file in files:
-      if file.endswith('fasta'):
-        ggIds.add(int(file.split('.')[0]))
+    for f in files:
+      if f.endswith('fasta'):
+        ggIds.add(int(f.split('.')[0]))
 
     print 'Putative 16S genes to assemble: ' + str(len(ggIds))
 

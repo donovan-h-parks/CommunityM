@@ -17,7 +17,6 @@
 #                                                                             #
 ###############################################################################
 
-
 """
 Read configuration file specifying details of all samples.
 """
@@ -138,6 +137,8 @@ class ReadConfig(object):
 
   def run(self, configFile):
     projectParams, sampleParams = self.readConfig(configFile)
+    print projectParams
+    print sampleParams
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description="Read configuration file specifying details of all samples.",

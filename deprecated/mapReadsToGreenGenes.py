@@ -17,7 +17,6 @@
 #                                                                             #
 ###############################################################################
 
-
 """
 Map reads to GreenGenes database.
 """
@@ -32,9 +31,7 @@ __email__ = 'donovan.parks@gmail.com'
 __status__ = 'Development'
 
 import os
-import sys
 import argparse
-import tempfile
 import ntpath
 
 from readConfig import ReadConfig
@@ -85,8 +82,6 @@ if __name__ == '__main__':
   parser.add_argument('otu', help='clustering threshold of GreenGenes DB (choices: 94, 97, 99)', type=int, choices=[94, 97, 99])
 
   parser.add_argument('-t', '--threads', help='number of threads', type=int, default = 1)
-
-  parser.add_argument('--version', help='show version number of program', action='version', version='Map Reads v0.0.1')
 
   args = parser.parse_args()
 
