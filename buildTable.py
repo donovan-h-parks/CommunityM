@@ -32,66 +32,28 @@ __status__ = 'Development'
 
 import sys
 import argparse
+import ntpath
 
 from biom.table import table_factory, SparseOTUTable
 
 from readConfig import ReadConfig
+from taxonomyUtils import ranksByLabel, ranksByLevel, rankPrefixes, LCA, parseTaxon 
 
 class BuildTable(object):
   def __init__(self):
-    self.ranksByLabel = {'Domain':0, 'Phylum':1, 'Class':2, 'Order':3, 'Family':4, 'Genus':5, 'Species':6, 'GG_ID':7}
-    self.ranksByLevel = {0:'Domain', 1:'Phylum', 2:'Class', 3:'Order', 4:'Family', 5:'Genus', 6:'Species', 7:'GG_ID'}
-    self.rankPrefixes = {0:'k__', 1:'p__', 2:'c__', 3:'o__', 4:'f__', 5:'g__', 6:'s__', 7:'id__'}
     pass
   
-  def LCA(self, taxonomy1, taxonomy2):
-    taxonomy = []
-    for i in xrange(0, len(self.ranksByLevel)):
-      t1, b1 = self.parseTaxa(taxonomy1[i])
-      t2, b2 = self.parseTaxa(taxonomy2[i])
-      
-      if t1 != t2:
-        taxonomy.append(self.rankPrefixes[i] + 'unclassified')
-      else:
-          taxonomy.append(self.rankPrefixes[i] + t1 + '(' + str(min(b1, b2)) + ')')
-    
-    return taxonomy
-  
-  def parseTaxa(self, taxa):
-    if '(' in taxa:
-      taxonSplit = taxa.split('(')
-      taxonId = taxonSplit[0]
-      taxonId = taxonId[taxonId.find('__')+2:].strip()
-      bootstrapSupport = int(taxonSplit[1][0:taxonSplit[1].find(')')])
-    else:
-      taxonId = taxa.strip()
-      bootstrapSupport = 0
-      
-    return taxonId, bootstrapSupport
-
-  def parseClassificationFile(self, classificationFile, bTreatPairsAsSingles, bootstrapThreshold, rankIndex, counts, taxonomy):
-    seqClassification = {}
-    with open(classificationFile) as fin:
-      for line in fin:
-          lineSplit = line.split('\t')
-          seqId = lineSplit[0]
-          taxa = lineSplit[1].split(';')
-          
-          if not bTreatPairsAsSingles and ('/1' in seqId or '/2' in seqId):
-            readId = seqId[0:seqId.rfind('/')]
-            if readId in seqClassification:
-              seqClassification[readId] = self.LCA(taxa, seqClassification[readId])
-            else:
-              seqClassification[readId] = taxa    
-          else:
-            seqClassification[seqId] = taxa
-    
-    
+  def parseClassification(self, seqClassification, bIgnoreUnmapped, bootstrapThreshold, rankIndex, counts, taxonomy):
+    countUnmapped = 0
     for seqId in seqClassification:
       taxa = seqClassification[seqId]
       
-      taxonId, bootstrapSupport = self.parseTaxa(taxa[rankIndex])
-
+      taxonId, bootstrapSupport = parseTaxon(taxa[rankIndex])
+      
+      if bIgnoreUnmapped and 'unmapped' in taxonId:
+        countUnmapped += 1
+        continue
+        
       if bootstrapSupport >= bootstrapThreshold:
         counts[taxonId] = counts.get(taxonId, 0) + 1
 
@@ -103,7 +65,7 @@ class BuildTable(object):
           else:
             taxaName = taxa[r].strip()
             
-          taxaDict[self.ranksByLevel[r]] = taxaName
+          taxaDict[ranksByLevel[r]] = taxaName
           taxaList.append(taxaName)
 
         taxaDict['taxonomy'] = taxaList
@@ -114,11 +76,62 @@ class BuildTable(object):
         unclassifiedDict = {}
         unclassifiedList = []
         for r in xrange(0, rankIndex+1):
-            unclassifiedList[self.ranksByLevel[r]] = self.rankPrefixes[r] + 'unclassified'
+            unclassifiedList.append(rankPrefixes[r] + 'unclassified')
         unclassifiedDict['taxonomy'] = unclassifiedList
         taxonomy['unclassified'] = unclassifiedDict
+        
+    if bIgnoreUnmapped:
+      print '  [Note] Ignoring ' + str(countUnmapped) + ' unmapped reads.'
+    print ''
+        
+  def parsePairedClassificationFiles(self, classificationFile1, classificationFile2, bIgnoreUnmapped, bTreatPairsAsSingles, bootstrapThreshold, rankIndex, counts, taxonomy):
+    print 'Processing: '
+    print '  ' + classificationFile1
+    print '  ' + classificationFile2
+    
+    seqClassification = {}
+    with open(classificationFile1) as fin:
+      for line in fin:
+          lineSplit = line.split('\t')
+          seqId = lineSplit[0]
+          taxa = lineSplit[1].split(';')
+          
+          if not bTreatPairsAsSingles:
+            seqId = seqId[0:seqId.rfind('/')]
+          
+          seqClassification[seqId] = taxa
+          
+    with open(classificationFile2) as fin:
+      for line in fin:
+        lineSplit = line.split('\t')
+        seqId = lineSplit[0]
+        taxa = lineSplit[1].split(';')
+          
+        if not bTreatPairsAsSingles:
+          seqId = seqId[0:seqId.rfind('/')]
+          seqClassification[seqId] = LCA(taxa, seqClassification[seqId])  
+        else:
+          seqClassification[seqId] = taxa
+             
+    self.parseClassification(seqClassification, bIgnoreUnmapped, bootstrapThreshold, rankIndex, counts, taxonomy)
+    
+  def parseSingleClassificationFile(self, classificationFile, bIgnoreUnmapped, bootstrapThreshold, rankIndex, counts, taxonomy):
+    print 'Processing: '
+    print '  ' + classificationFile
+    
+    seqClassification = {}
+    with open(classificationFile) as fin:
+      for line in fin:
+          lineSplit = line.split('\t')
+          seqId = lineSplit[0]
+          taxa = lineSplit[1].split(';')        
+          seqClassification[seqId] = taxa
+             
+    self.parseClassification(seqClassification, bIgnoreUnmapped, bootstrapThreshold, rankIndex, counts, taxonomy)
 
-  def write(self, fout, sampleCounts, taxonomy):
+  def write(self, output, sampleCounts, taxonomy):
+    fout = open(output, 'w')
+    
     sampleIds = sorted(sampleCounts.keys())
     otuIds = sorted(taxonomy.keys())
 
@@ -135,14 +148,14 @@ class BuildTable(object):
 
     t.getBiomFormatJsonString("CommunityM", direct_io=fout)
 
-  def run(self, configFile, bTreatPairsAsSingles, bootstrap, rank, bAbsoluteValues, fout):
+  def run(self, configFile, bIgnoreUnmapped, bTreatPairsAsSingles, bootstrap, rank, bAbsoluteValues, output):
     rc = ReadConfig()
     projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = True)
 
     # read classification results for all sequence files in each sample
     sampleCounts = {}
     taxonomy = {}
-    rankIndex = self.ranksByLabel[rank]
+    rankIndex = ranksByLabel[rank]
     for sample in sampleParams:
       prefix = projectParams['output_dir'] + 'classified/' + sample
 
@@ -150,17 +163,21 @@ class BuildTable(object):
 
       pairs = sampleParams[sample]['pairs']
       for i in xrange(0, len(pairs), 2):
-        pair = pairs[i]
-        classificationFile = prefix + '.' + pair[pair.rfind('/')+1:pair.rfind('.')] + '.intersect.16S.tsv'
-        self.parseClassificationFile(classificationFile, bTreatPairsAsSingles, bootstrap, rankIndex, counts, taxonomy)
+        pair1Base = ntpath.basename(pairs[i])
+        pair2Base = ntpath.basename(pairs[i+1])
         
-        classificationFile = prefix + '.' + pair[pair.rfind('/')+1:pair.rfind('.')] + '.difference.16S.tsv'
-        self.parseClassificationFile(classificationFile, bTreatPairsAsSingles, bootstrap, rankIndex, counts, taxonomy)
+        classificationFile1 = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.16S.tsv'
+        classificationFile2 = prefix + '.' + pair2Base[0:pair2Base.rfind('.')] + '.intersect.16S.tsv'
+        self.parsePairedClassificationFiles(classificationFile1, classificationFile2, bIgnoreUnmapped, bTreatPairsAsSingles, bootstrap, rankIndex, counts, taxonomy)
+        
+        classificationFile = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.16S.tsv'
+        self.parseSingleClassificationFile(classificationFile, bIgnoreUnmapped, bootstrap, rankIndex, counts, taxonomy)
 
       singles = sampleParams[sample]['singles']
       for single in singles:
-        classificationFile = prefix + '.' + single[single.rfind('/')+1:single.rfind('.')] + '.16S.tsv'
-        self.parseClassificationFile(classificationFile, bTreatPairsAsSingles, bootstrap, rankIndex, counts, taxonomy)
+        singleBase = ntpath.basename(single)
+        classificationFile = prefix + '.' + singleBase[0:singleBase.rfind('.')] + '.16S.tsv'
+        self.parseSingleClassificationFile(classificationFile, bIgnoreUnmapped, bootstrap, rankIndex, counts, taxonomy)
 
       if not bAbsoluteValues:
         sumCounts = 0
@@ -173,22 +190,21 @@ class BuildTable(object):
       sampleCounts[sampleParams[sample]['name']] = counts
 
     # write out results in BIOM format
-    self.write(fout, sampleCounts, taxonomy)
+    self.write(output, sampleCounts, taxonomy)
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description="Build table in BIOM format summarizing classified 16S sequences.")
 
   parser.add_argument('config_file', help='project config file')
-  parser.add_argument('-o', '--output', help='output file (default = stdout).', type=argparse.FileType('w'), default=sys.stdout)
+  parser.add_argument('output', help='output file')
+  parser.add_argument('-u', '--ignore_unmapped', help='do not consider unmapped reads', action="store_true")
   parser.add_argument('-s', '--pairs_as_singles', help='treat paired reads as singletons', action="store_true")
   parser.add_argument('-b', '--bootstrap', help='bootstrap threshold required to accept classification (default = 0)', type=int, default=0)
   parser.add_argument('-a', '--absolute', help='write absolute values instead of relative values', action='store_true')
   parser.add_argument('-r', '--rank', help='taxonomic rank of table (choices: Domain, Phylum, Class, Order, Family, Genus, Species, GG_ID), (default = GG_ID)',
                             choices=['Domain', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'GG_ID'], default='GG_ID')
 
-  parser.add_argument('--version', help='show version number of program', action='version', version='Build classification table v0.0.1')
-
   args = parser.parse_args()
 
   buildTable = BuildTable()
-  buildTable.run(args.config_file, args.singles, args.bootstrap, args.rank, args.absolute, args.output)
+  buildTable.run(args.config_file, args.ignore_unmapped, args.pairs_as_singles, args.bootstrap, args.rank, args.absolute, args.output)

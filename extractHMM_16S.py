@@ -197,12 +197,18 @@ class Extract16S(object):
       diffFile = outputPrefix1 + '.difference.SSU.fasta'
       fout = open(diffFile, 'w')
       for seqId in hitDiff1:
-        fout.write('>' + seqs1[seqId][0] + '\n')
+        r = seqs1[seqId][0]     # strip read identifier as these will be mapped as singletons
+        if '/' in r:
+          r = r[0:r.rfind('/')]
+        fout.write('>' + r + '\n')
         fout.write(seqs1[seqId][1] + '\n')
         
       hitDiff2 = hits2.difference(hits1)
       for seqId in hitDiff2:
-        fout.write('>' + seqs2[seqId][0] + '\n')
+        r = seqs2[seqId][0]
+        if '/' in r:
+          r = r[0:r.rfind('/')]
+        fout.write('>' + r + '\n')
         fout.write(seqs2[seqId][1] + '\n')
       fout.close()
 
@@ -266,7 +272,10 @@ class Extract16S(object):
       allSeqFile = outputPrefix + '.SSU.fasta'
       fout = open(allSeqFile, 'w')
       for seqId in hits:
-        fout.write('>' + seqs[seqId][0] + '\n')
+        r = seqs[seqId][0]     # strip read identifier as these will be mapped as singletons
+        if '/' in r:
+          r = r[0:r.rfind('/')]
+        fout.write('>' + r + '\n')
         fout.write(seqs[seqId][1] + '\n')
 
       fout.close()

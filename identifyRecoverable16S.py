@@ -90,67 +90,51 @@ class IdentifyRecoverable16S(object):
 
     return classifications
 
-  def identifyConsistentPairs(self, referenceSeqHits, pairFile1, pairFile2, classificationFile, neighbours, bPairsAsSingles, bSingleEnded):
+  def identifyConsistentPairs(self, referenceSeqHits, pairFile1, pairFile2, classificationFile1, classificationFile2, neighbours, bPairsAsSingles, bSingleEnded):
     if not self.bQuiet:
       print '  Reading classification file.'
 
-    classifications = self.readClassifications(classificationFile)
+    classifications1 = self.readClassifications(classificationFile1)
+    classifications2 = self.readClassifications(classificationFile2)
 
     # get read ids
     if not self.bQuiet:
       print '  Identifying consistent pairs.'
-
-    readIds = set()
-    for seqId in classifications:
-      readId = seqId
-      if '/' in seqId:
-        readId = seqId[0:seqId.find('/')]
-      readIds.add(readId)
 
     # find pairs that agree on classification
     numSingletons = 0
     numPairsInAgreement = 0
     numPairsInDisagreement = 0
     numUnclassified = 0
-    for readId in readIds:
+    for seqId1 in classifications1:
       ggId1 = ggId2 = None
 
-      seqId1 = readId + '/1'
-      seqId2 = readId + '/2'
+      seqId2 = seqId1[0:-1] + '2'
 
-      if seqId1 in classifications and self.ggIdFromTaxonomy(classifications[seqId1]) != 'unclassified':
-        ggId1 = self.ggIdFromTaxonomy(classifications[seqId1])
-      else:
-        if seqId1 in classifications and self.ggIdFromTaxonomy(classifications[seqId1]) == 'unclassified':
+      ggId1 = self.ggIdFromTaxonomy(classifications1[seqId1])
+      if ggId1 == 'unclassified' or ggId1 == 'unmapped':
+        numUnclassified += 1
+  
+        ggId2 = self.ggIdFromTaxonomy(classifications2[seqId2])
+        if ggId2 == 'unclassified' or ggId2 == 'unmapped':
           numUnclassified += 1
-
-        if seqId2 in classifications:
-          ggId = self.ggIdFromTaxonomy(classifications[seqId2])
-          if ggId != 'unclassified':
-            numSingletons += 1
-            if bSingleEnded:
-              referenceSeqHits[ggId] = referenceSeqHits.get(ggId, ReferenceSeqHit(ggId))
-              referenceSeqHits[ggId].addSingleHit(pairFile2, seqId2)
-          else:
-            numUnclassified += 1
-
+        else:
+          numSingletons += 1
+          if bSingleEnded:
+            referenceSeqHits[ggId2] = referenceSeqHits.get(ggId2, ReferenceSeqHit(ggId2))
+            referenceSeqHits[ggId2].addSingleHit(pairFile2, seqId2)
+  
         continue
 
-      if seqId2 in classifications and self.ggIdFromTaxonomy(classifications[seqId2]) != 'unclassified':
-        ggId2 = self.ggIdFromTaxonomy(classifications[seqId2])
-      else:
-        if seqId2 in classifications and self.ggIdFromTaxonomy(classifications[seqId2]) == 'unclassified':
-          numUnclassified += 1
+      ggId2 = self.ggIdFromTaxonomy(classifications2[seqId2])
+      if ggId2 == 'unclassified' or ggId2 == 'unmapped':
+        numUnclassified += 1
 
-        if seqId1 in classifications:
-          ggId = self.ggIdFromTaxonomy(classifications[seqId1])
-          if ggId != 'unclassified':
-            numSingletons += 1
-            if bSingleEnded:
-              referenceSeqHits[ggId] = referenceSeqHits.get(ggId, ReferenceSeqHit(ggId))
-              referenceSeqHits[ggId].addSingleHit(pairFile1, seqId1)
-          else:
-            numUnclassified += 1
+        ggId1 = self.ggIdFromTaxonomy(classifications1[seqId1])
+        numSingletons += 1
+        if bSingleEnded:
+          referenceSeqHits[ggId1] = referenceSeqHits.get(ggId1, ReferenceSeqHit(ggId1))
+          referenceSeqHits[ggId1].addSingleHit(pairFile1, seqId1)
 
         continue
 
@@ -167,11 +151,11 @@ class IdentifyRecoverable16S(object):
           referenceSeqHits[ggId2].addSingleHit(pairFile2, seqId2)
 
     if not self.bQuiet:
-      print '    Classified reads: ' + str(len(classifications))
+      print '    Classified reads: ' + str(len(classifications1) + len(classifications2))
       print '      Singletons: ' + str(numSingletons)
       print '      Reads in pairs with similar classifications: ' + str(2*numPairsInAgreement)
       print '      Reads in pairs with different classifications: ' + str(2*numPairsInDisagreement)
-      print '      Unclassified reads: ' + str(numUnclassified)
+      print '      Unclassified/unmapped reads: ' + str(numUnclassified)
       print ''
 
   def addSingletons(self, referenceSeqHits, single, classificationFile):
@@ -187,15 +171,15 @@ class IdentifyRecoverable16S(object):
     for seqId in classifications:
       ggId = self.ggIdFromTaxonomy(classifications[seqId])
 
-      if ggId != 'unclassified':
+      if ggId == 'unclassified' or ggId == 'unmapped':
+        numUnclassified += 1
+      else:
         referenceSeqHits[ggId] = referenceSeqHits.get(ggId, ReferenceSeqHit(ggId))
         referenceSeqHits[ggId].addSingleHit(single, seqId)
-      else:
-        numUnclassified += 1
 
     if not self.bQuiet:
       print '    Classified single-ended reads: ' + str(len(classifications) - numUnclassified)
-      print '    Unclassified single-ended reads: ' + str(numUnclassified)
+      print '    Unclassified/unmapped single-ended reads: ' + str(numUnclassified)
       print ''
 
   def sortHits(self, referenceSeqHits):
@@ -334,6 +318,7 @@ class IdentifyRecoverable16S(object):
           refSeqHit = referenceSeqHits[ggId]
 
           for singleFile in refSeqHit.singles:
+            print singleFile
             for readId in refSeqHit.singles[singleFile]:
               singletonsOut.write('>' + readId + '\n')
               singletonsOut.write(seqsInFiles[singleFile][readId] + '\n')
@@ -403,15 +388,18 @@ class IdentifyRecoverable16S(object):
         pair1Base = ntpath.basename(pairs[i])
         pair2Base = ntpath.basename(pairs[i+1])
         
-        classificationFile = classifiedPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.16S.tsv'
+        classificationFile1 = classifiedPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.16S.tsv'
+        classificationFile2 = classifiedPrefix + '.' + pair2Base[0:pair2Base.rfind('.')] + '.intersect.16S.tsv'
 
         if not self.bQuiet:
-          print '  Processing file: ' + classificationFile
+          print '  Processing files: '
+          print '    ' + classificationFile1
+          print '    ' + classificationFile2
 
         pairFile1 = extractedPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.SSU.fasta'
         pairFile2 = extractedPrefix + '.' + pair2Base[0:pair2Base.rfind('.')] + '.intersect.SSU.fasta'
 
-        self.identifyConsistentPairs(referenceSeqHits, pairFile1, pairFile2, classificationFile, neighbours, bPairsAsSingles, bSingleEnded)
+        self.identifyConsistentPairs(referenceSeqHits, pairFile1, pairFile2, classificationFile1, classificationFile2, neighbours, bPairsAsSingles, bSingleEnded)
         
         if bSingleEnded:
           classificationFile = classifiedPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.16S.tsv'

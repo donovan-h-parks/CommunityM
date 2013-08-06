@@ -18,7 +18,7 @@
 ###############################################################################
 
 """
-Useful methods for interacting with BWA
+Useful methods for processing taxonomy strings.
 """
 
 __author__ = 'Donovan Parks'
@@ -30,51 +30,44 @@ __maintainer__ = 'Donovan Parks'
 __email__ = 'donovan.parks@gmail.com'
 __status__ = 'Development'
 
-import os
-import tempfile
+ranksByLabel = {'Domain':0, 'Phylum':1, 'Class':2, 'Order':3, 'Family':4, 'Genus':5, 'Species':6, 'GG_ID':7}
+ranksByLevel = {0:'Domain', 1:'Phylum', 2:'Class', 3:'Order', 4:'Family', 5:'Genus', 6:'Species', 7:'GG_ID'}
+rankPrefixes = {0:'k__', 1:'p__', 2:'c__', 3:'o__', 4:'f__', 5:'g__', 6:'s__', 7:'id__'}
 
-def maxAlignments():
-  return 1000
+def parseTaxon(taxon):
+  if '(' in taxon:
+    taxonSplit = taxon.split('(')
+    taxonId = taxonSplit[0]
+    taxonId = taxonId.strip()
+    bootstrapSupport = int(taxonSplit[1][0:taxonSplit[1].find(')')])
+  else:
+    taxonId = taxon.strip()
+    bootstrapSupport = 0
+    
+  return taxonId, bootstrapSupport
 
-def mapPair(db, file1, file2, bamPrefix, threads):
-  _, tmpAlnFile1 = tempfile.mkstemp()
-  _, tmpAlnFile2 = tempfile.mkstemp()
-
-  print 'Processing pair: ' + file1 + ', ' + file2
-
-  print ''
-  print 'Aligning pairs: '
-  os.system('bwa aln -t ' + str(threads) + ' ' + db + ' ' + file1 + ' > ' + tmpAlnFile1)
-  os.system('bwa aln -t ' + str(threads) + ' ' + db + ' ' + file2 + ' > ' + tmpAlnFile2)
-
-  print ''
-  print 'Mapping reads:'
-  os.system('bwa sampe -n ' + str(maxAlignments()) + ' -N ' + str(maxAlignments()) + ' ' + db + ' ' + tmpAlnFile1 + ' ' + tmpAlnFile2 + ' ' + file1 + ' ' + file2 + '| samtools view -Subh - | samtools sort - ' + bamPrefix)
-
-  print ''
-  print 'Indexing BAM file.'
-  os.system('samtools index ' + bamPrefix + '.bam')
-  print ''
-
-  os.remove(tmpAlnFile1)
-  os.remove(tmpAlnFile2)
-
-def mapSingle(db, filename, bamPrefix, threads):
-  _, tmpAlnFile = tempfile.mkstemp()
-
-  print 'Processing single-ended read file: ' + filename
-
-  print ''
-  print 'Aligning reads: '
-  os.system('bwa aln -t ' + str(threads) + ' ' + db + ' ' + filename + ' > ' + tmpAlnFile)
-
-  print ''
-  print 'Mapping reads:'
-  os.system('bwa samse -n ' + str(maxAlignments()) + ' ' + db + ' ' + tmpAlnFile + ' ' + filename + '| samtools view -Subh - | samtools sort - ' + bamPrefix)
-
-  print ''
-  print 'Indexing BAM file.'
-  os.system('samtools index ' + bamPrefix + '.bam')
-  print ''
-
-  os.remove(tmpAlnFile)
+def LCA(taxonomy1, taxonomy2):
+  taxonomy = []
+  for i in xrange(0, len(ranksByLevel)-1):
+    t1, b1 = parseTaxon(taxonomy1[i])
+    t2, b2 = parseTaxon(taxonomy2[i])
+    
+    if t1 != t2:
+      if 'unmapped' in t1 or 'unmapped' in t2:
+        taxonomy.append(rankPrefixes[i] + 'unmapped')
+      else:
+        taxonomy.append(rankPrefixes[i] + 'unclassified')
+    else:
+      if b1 == 0 and b2 == 0:
+        taxonomy.append(t1)
+      else:
+        taxonomy.append(t1 + '(' + str(min(b1, b2)) + ')')
+  
+  # return reference sequence id
+  t1, b1 = parseTaxon(taxonomy1[len(ranksByLevel)-1])
+  if b1 == 0:
+    taxonomy.append(t1)
+  else:
+    taxonomy.append(t1 + '(' + str(min(b1, b2)) + ')')
+  
+  return taxonomy

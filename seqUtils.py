@@ -18,7 +18,7 @@
 ###############################################################################
 
 """
-Use methods for reading, writing, and processing sequence files.
+Useful methods for reading, writing, and processing sequence files.
 """
 
 __author__ = 'Donovan Parks'

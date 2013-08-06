@@ -36,14 +36,14 @@ import argparse
 import ntpath
 
 from readConfig import ReadConfig
-from bwaUtils import mapPair, mapSingle
+from bwaUtils import mapPair, mapSingle, maxAlignments
+from taxonomyUtils import LCA
 
 import pysam
 
 class ClassifyBWA(object):
   def __init__(self):
-    self.unclassifiedId = -1
-    self.unclassifiedStr = 'k__unclassified;p__unclassified;c__unclassified;o__unclassified;f__unclassified;g__unclassified;s__unclassified;id__unclassified;'
+    self.unmappedStr = 'k__unmapped;p__unmapped;c__unmapped;o__unmapped;f__unmapped;g__unmapped;s__unmapped;id__unmapped;'
     self.ggDB = '/srv/db/gg/2013_05/gg_13_5_otus/rep_set/##_otus.fasta'
     self.taxonomyFile = '/srv/db/gg/2013_05/gg_13_5_otus/taxonomy/##_otu_taxonomy.full.txt'
 
@@ -55,101 +55,145 @@ class ClassifyBWA(object):
 
     return ggIdToTaxonomy
 
-  def readPairedBAM(self, bamFile):
+  def processRead(self, bam, read, ggIdToTaxonomy, counts):
+    if read.is_unmapped:
+      counts['unmapped'] += 1
+      return self.unmappedStr      
+    elif (read.alen < self.minLength):
+      counts['align len'] += 1
+      return self.unmappedStr
+    elif read.opt('NM') > self.maxEditDistance:
+      counts['edit dist'] += 1
+      return self.unmappedStr
+    else:
+      taxonomy = ggIdToTaxonomy[bam.getrname(read.tid)]
+      try:
+        numOptimalHits = read.opt('X0')
+      except:
+        # missing X0 so the mapping is unique and can be trusted
+        numOptimalHits = 1
+        
+      if numOptimalHits > 1: 
+        try:
+          numSubOptimalHits = read.opt('X1')
+        except:
+          numSubOptimalHits = 0
+          
+        counts['multiple hits'] += 1
+        if numOptimalHits + numSubOptimalHits > maxAlignments():
+          # this should rarely, if ever happen and when it does
+          # it indicates a read has an excessive number of equally good alignments
+          ggId = self.unmappedStr
+        else:
+          # find lower common ancestor of top hits
+          optEditDist = read.opt('NM')
+          lineSplit = read.opt('XA').split(';')[0:-1]
+          taxonomy = taxonomy.split(';')[0:-1]
+          for altHit in lineSplit:
+            tokens = altHit.split(',')
+            ggId = tokens[0]
+            editDist = int(tokens[3])
+            if editDist == optEditDist:
+              taxonomy = LCA(taxonomy, ggIdToTaxonomy[ggId].split(';'))
+              
+          taxonomy = ';'.join(taxonomy)
+
+    return taxonomy
+        
+  def readPairedBAM(self, bamFile, ggIdToTaxonomy):
     # read compressed BAM file and report basic statistics
     bam = pysam.Samfile(bamFile, 'rb')
 
     # find all reads that mapped to a 16S sequence
     readsMappedTo16S_1 = {}
     readsMappedTo16S_2 = {}
+    counts = {'unmapped':0, 'edit dist':0, 'align len':0, 'multiple hits':0}
+    rCount = 0
     for read in bam.fetch(until_eof=True):
       if read.is_secondary:
-        print read.qname
         continue
-
-      bMultipleTopHits = False
-      for tag in read.tags:
-        if tag[0] == 'X0' and int(tag[1]) > 1:
-          bMultipleTopHits = True
-          break
-
-      if bMultipleTopHits or read.is_unmapped or (read.mapq <= self.mappingQualityThreshold) or (read.alen < self.minLength):
-        ggId = self.unclassifiedId
-      else:
-        ggId = bam.getrname(read.tid)
-
+      
+      rCount += 1
+      
+      taxonomy = self.processRead(bam, read, ggIdToTaxonomy, counts)
+       
       if read.is_read1:
-        readsMappedTo16S_1[read.qname + '/1'] = ggId
+        readsMappedTo16S_1[read.qname + '/1'] = taxonomy
       elif read.is_read2:
-        readsMappedTo16S_2[read.qname + '/2'] = ggId
+        readsMappedTo16S_2[read.qname + '/2'] = taxonomy
 
     bam.close()
+    
+    print 'Number of reads: ' + str(rCount)
+    print '  Reads unmapped: ' + str(counts['unmapped'])
+    print '  Reads with multiple top hits: ' + str(counts['multiple hits'])
+    print '  Reads failing edit distance threshold: ' + str(counts['edit dist'])
+    print '  Reads failing alignment length threshold: ' + str(counts['align len'])
 
     return readsMappedTo16S_1, readsMappedTo16S_2
 
-  def readSingleBAM(self, bamFile):
+  def readSingleBAM(self, bamFile, ggIdToTaxonomy):
     # read compressed BAM file and report basic statistics
     bam = pysam.Samfile(bamFile, 'rb')
 
     # find all reads that mapped to a 16S sequence
     readsMappedTo16S = {}
+    counts = {'unmapped':0, 'edit dist':0, 'align len':0, 'multiple hits':0}
+    rCount = 0
     for read in bam.fetch(until_eof=True):
       if read.is_secondary:
         continue
+      
+      rCount += 1
 
-      bMultipleTopHits = False
-      for tag in read.tags:
-        if tag[0] == 'X0' and int(tag[1]) > 1:
-          bMultipleTopHits = True
-          break
-
-      if bMultipleTopHits or read.is_unmapped or (read.mapq <= self.mappingQualityThreshold) or (read.alen < self.minLength):
-        readsMappedTo16S[read.qname] = self.unclassifiedId
-      else:
-        readsMappedTo16S[read.qname] = bam.getrname(read.tid)
+      taxonomy = self.processRead(bam, read, ggIdToTaxonomy, counts)  
+      readsMappedTo16S[read.qname] = taxonomy
 
     bam.close()
+    
+    print 'Number of reads: ' + str(rCount)
+    print '  Reads unmapped: ' + str(counts['unmapped'])
+    print '  Reads with multiple top hits: ' + str(counts['multiple hits'])
+    print '  Reads failing edit distance threshold: ' + str(counts['edit dist'])
+    print '  Reads failing alignment length threshold: ' + str(counts['align len'])
 
     return readsMappedTo16S
 
-  def writeClassification(self, filename, mappedReads, ggIdToTaxonomy, bAppend = False):
-    if bAppend:
-      fout = open(filename, 'a')
-    else:
-      fout = open(filename, 'w')
-
-    for refName in mappedReads:
-      ggId = mappedReads[refName]
-      if ggId != self.unclassifiedId:
-        fout.write(refName + '\t' + ggIdToTaxonomy[ggId] + '\n')
-      else:
-        fout.write(refName + '\t' + self.unclassifiedStr + '\n')
+  def writeClassification(self, filename, mappedReads):
+    fout = open(filename, 'w')
+    for refName, taxonomy in mappedReads.iteritems():
+      fout.write(refName + '\t' + taxonomy + '\n')
     fout.close()
 
   def processPairs(self, pairs, ggIdToTaxonomy, outputDir, prefix):
     for i in xrange(0, len(pairs), 2):
       pair1 = pairs[i]
       pair2 = pairs[i+1]
+      
+      pair1Base = ntpath.basename(pair1)
+      pair2Base = ntpath.basename(pair2)
 
       print 'Identifying 16S sequences in paired-end reads: ' + pair1 + ', ' + pair2
 
       # write out classifications for paired-end reads with both ends identified as 16S
-      pair1Base = ntpath.basename(pair1)
       bamFile = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.16S.bam'
-      readsMappedTo16S_1, readsMappedTo16S_2  = self.readPairedBAM(bamFile)
+      readsMappedTo16S_1, readsMappedTo16S_2  = self.readPairedBAM(bamFile, ggIdToTaxonomy)
 
-      output = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.16S.tsv'
-      print '  Paired results written to: ' + output
-      self.writeClassification(output, readsMappedTo16S_1, ggIdToTaxonomy)
-      self.writeClassification(output, readsMappedTo16S_2, ggIdToTaxonomy, bAppend = True)
+      output1 = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.16S.tsv'
+      output2 = prefix + '.' + pair2Base[0:pair2Base.rfind('.')] + '.intersect.16S.tsv'
+      print 'Paired results written to: ' 
+      print '  ' + output1
+      print '  ' + output2 + '\n'
+      self.writeClassification(output1, readsMappedTo16S_1)
+      self.writeClassification(output2, readsMappedTo16S_2)
       
       # write out classifications for paired-ends reads with only one end identified as 16S
       bamFile = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.16S.bam'
-      readsMappedTo16S = self.readSingleBAM(bamFile)
+      readsMappedTo16S = self.readSingleBAM(bamFile, ggIdToTaxonomy)
       
       output = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.16S.tsv'
-      print '  Singleton results written to: ' + output
-      self.writeClassification(output, readsMappedTo16S, ggIdToTaxonomy)
+      print 'Singleton results written to: ' + output + '\n'
+      self.writeClassification(output, readsMappedTo16S)
 
   def processSingles(self, singles, ggIdToTaxonomy, outputDir, prefix):
     for i in xrange(0, len(singles)):
@@ -159,13 +203,13 @@ class ClassifyBWA(object):
 
       singleBase = ntpath.basename(seqFile)
       bamFile = prefix + '.' + singleBase[0:singleBase.rfind('.')] + '.16S.bam'
-      readsMappedTo16S = self.readSingleBAM(bamFile)
+      readsMappedTo16S = self.readSingleBAM(bamFile, ggIdToTaxonomy)
 
       output = prefix + '.' + singleBase[0:singleBase.rfind('.')] + '.16S.tsv'
-      print '  Classification results written to: ' + output
-      self.writeClassification(output, readsMappedTo16S, ggIdToTaxonomy)
+      print 'Classification results written to: ' + output + '\n'
+      self.writeClassification(output, readsMappedTo16S)
 
-  def run(self, configFile, otu, mappingQual, minLength, threads):
+  def run(self, configFile, otu, maxEditDistance, minLength, threads):
     rc = ReadConfig()
     projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = True)
     
@@ -181,7 +225,7 @@ class ClassifyBWA(object):
       else:
         sys.exit()
 
-    self.mappingQualityThreshold = mappingQual
+    self.maxEditDistance = maxEditDistance
     self.minLength = minLength
 
     taxonomyFile = self.taxonomyFile.replace('##', str(otu), 1)
@@ -253,11 +297,11 @@ if __name__ == '__main__':
                                       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument('config_file', help='project config file.')
   parser.add_argument('otu', help='GreenGenes DB to use for classification (choices: 94, 97, 99)', type=int, choices=[94, 97, 99], default=97)
-  parser.add_argument('-m', '--map_quality', help='mapping quality required to treat read as classified (default: 10)', type=int, default=10)
+  parser.add_argument('-e', '--edit_distance', help='maximum edit distance before treating a read as unmapped (default: 10)', type=int, default=10)
   parser.add_argument('-l', '--min_length', help='minimum required alignment length to tread read as classified (default: 90)', type=int, default=90)
   parser.add_argument('-t', '--threads', help='number of threads', type=int, default = 1)
 
   args = parser.parse_args()
 
   classifyBWA = ClassifyBWA()
-  classifyBWA.run(args.config_file, args.otu, args.map_quality, args.min_length, args.threads)
+  classifyBWA.run(args.config_file, args.otu, args.edit_distance, args.min_length, args.threads)
