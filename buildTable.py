@@ -30,7 +30,6 @@ __maintainer__ = 'Donovan Parks'
 __email__ = 'donovan.parks@gmail.com'
 __status__ = 'Development'
 
-import sys
 import argparse
 import ntpath
 

@@ -52,12 +52,16 @@ class ReadConfig(object):
       data = configParser.get(section, option)
       if option == 'name':
         sampleParams[option] = data
+      elif option == 'edit_dist':
+        sampleParams['edit_dist'] = int(data)
+      elif option == 'min_align_len':
+        sampleParams['min_align_len'] = int(data)
       else:
         if data != '':
           sampleParams[option] = [x.strip() for x in data.split(',')]
         else:
           sampleParams[option] = []
-
+          
     return sampleParams
 
   def validateMothurCompatibility(self, path):

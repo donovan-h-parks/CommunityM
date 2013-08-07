@@ -36,8 +36,8 @@ import argparse
 import ntpath
 
 from readConfig import ReadConfig
-from bwaUtils import mapPair, mapSingle, maxAlignments
-from taxonomyUtils import LCA
+from bwaUtils import mapPair, mapSingle
+from taxonomyUtils import LCA, readTaxonomy
 
 import pysam
 
@@ -47,115 +47,140 @@ class ClassifyBWA(object):
     self.ggDB = '/srv/db/gg/2013_05/gg_13_5_otus/rep_set/##_otus.fasta'
     self.taxonomyFile = '/srv/db/gg/2013_05/gg_13_5_otus/taxonomy/##_otu_taxonomy.full.txt'
 
-  def readTaxonomy(self, taxonomyFile):
-    ggIdToTaxonomy = {}
-    for line in open(taxonomyFile):
-      lineSplit = line.split('\t')
-      ggIdToTaxonomy[lineSplit[0]] = lineSplit[1].rstrip()
-
-    return ggIdToTaxonomy
-
-  def processRead(self, bam, read, ggIdToTaxonomy, counts):
+  def processRead(self, bam, read, ggIdToTaxonomy, maxEditDistance, minLength, counts = None):
+    bMapped = False
     if read.is_unmapped:
-      counts['unmapped'] += 1
-      return self.unmappedStr      
-    elif (read.alen < self.minLength):
-      counts['align len'] += 1
-      return self.unmappedStr
-    elif read.opt('NM') > self.maxEditDistance:
-      counts['edit dist'] += 1
-      return self.unmappedStr
+      if counts != None:
+        counts['unmapped'] += 1
+      return self.unmappedStr, bMapped
+    elif (read.alen < minLength):
+      if counts != None:
+        counts['align len'] += 1
+      return self.unmappedStr, bMapped
+    elif (read.opt('NM') > maxEditDistance):
+      if counts != None:
+        counts['edit dist'] += 1
+      return self.unmappedStr, bMapped
     else:
       taxonomy = ggIdToTaxonomy[bam.getrname(read.tid)]
-      try:
-        numOptimalHits = read.opt('X0')
-      except:
-        # missing X0 so the mapping is unique and can be trusted
-        numOptimalHits = 1
-        
-      if numOptimalHits > 1: 
-        try:
-          numSubOptimalHits = read.opt('X1')
-        except:
-          numSubOptimalHits = 0
-          
-        counts['multiple hits'] += 1
-        if numOptimalHits + numSubOptimalHits > maxAlignments():
-          # this should rarely, if ever happen and when it does
-          # it indicates a read has an excessive number of equally good alignments
-          ggId = self.unmappedStr
-        else:
-          # find lower common ancestor of top hits
-          optEditDist = read.opt('NM')
-          lineSplit = read.opt('XA').split(';')[0:-1]
-          taxonomy = taxonomy.split(';')[0:-1]
-          for altHit in lineSplit:
-            tokens = altHit.split(',')
-            ggId = tokens[0]
-            editDist = int(tokens[3])
-            if editDist == optEditDist:
-              taxonomy = LCA(taxonomy, ggIdToTaxonomy[ggId].split(';'))
-              
-          taxonomy = ';'.join(taxonomy)
+      bMapped = True
 
-    return taxonomy
+    return taxonomy, bMapped
         
-  def readPairedBAM(self, bamFile, ggIdToTaxonomy):
+  def readPairedBAM(self, bamFile, ggIdToTaxonomy, maxEditDistance, minLength):
     # read compressed BAM file and report basic statistics
     bam = pysam.Samfile(bamFile, 'rb')
 
-    # find all reads that mapped to a 16S sequence
+    # find primary mappings for each query read
     readsMappedTo16S_1 = {}
     readsMappedTo16S_2 = {}
-    counts = {'unmapped':0, 'edit dist':0, 'align len':0, 'multiple hits':0}
-    rCount = 0
+    editDists = {}
+    counts = {'unmapped':0, 'edit dist':0, 'align len':0}
+    
+    for read in bam.fetch(until_eof=True):
+      if not read.is_secondary:
+        taxonomy, bMapped = self.processRead(bam, read, ggIdToTaxonomy, maxEditDistance, minLength, counts)
+        
+        if bMapped:
+          editDist = read.opt('NM')
+        else:
+          editDist = -1 # flag as unmapped
+                  
+        if read.is_read1:
+          qname = read.qname + '/1'
+          readsMappedTo16S = readsMappedTo16S_1
+        elif read.is_read2:
+          qname = read.qname + '/2'
+          readsMappedTo16S = readsMappedTo16S_2
+        
+        if qname in readsMappedTo16S and editDists[qname] != -1:
+          # read has multiple primary alignments for different parts of the query sequence
+          # which may indicate it is chimeric. For classification purposes, the LCA of
+          # all primary alignments is taken.
+          lca = LCA(readsMappedTo16S[qname].split(';'), taxonomy.split(';'))
+          readsMappedTo16S[qname] = ';'.join(lca)
+          editDists[qname] = max(editDist, editDists[read.qname])
+        else:
+          readsMappedTo16S[qname] = taxonomy
+          editDists[qname] = editDist
+            
+    # process secondary mappings for each query read
     for read in bam.fetch(until_eof=True):
       if read.is_secondary:
-        continue
-      
-      rCount += 1
-      
-      taxonomy = self.processRead(bam, read, ggIdToTaxonomy, counts)
+        # process primary read
+        taxonomy, bMapped = self.processRead(bam, read, ggIdToTaxonomy, maxEditDistance, minLength)
+        editDist = read.opt('NM')
+        
+        if read.is_read1:
+          qname = read.qname + '/1'
+          readsMappedTo16S = readsMappedTo16S_1
+        elif read.is_read2:
+          qname = read.qname + '/2'
+          readsMappedTo16S = readsMappedTo16S_2
+                  
+        if bMapped and editDist <= editDists[qname]:
+          lca = LCA(readsMappedTo16S[qname].split(';'), taxonomy.split(';'))
+          readsMappedTo16S[qname] = ';'.join(lca)
        
-      if read.is_read1:
-        readsMappedTo16S_1[read.qname + '/1'] = taxonomy
-      elif read.is_read2:
-        readsMappedTo16S_2[read.qname + '/2'] = taxonomy
-
     bam.close()
     
-    print 'Number of reads: ' + str(rCount)
-    print '  Reads unmapped: ' + str(counts['unmapped'])
-    print '  Reads with multiple top hits: ' + str(counts['multiple hits'])
-    print '  Reads failing edit distance threshold: ' + str(counts['edit dist'])
-    print '  Reads failing alignment length threshold: ' + str(counts['align len'])
+    if len(readsMappedTo16S_1) != len(readsMappedTo16S_2):
+      print '[Error] Paired files do not have the same number of reads.'
+      sys.exit()
+    
+    print '  Number of reads: ' + str(len(readsMappedTo16S))
+    print '    Reads unmapped: ' + str(counts['unmapped'])
+    print '    Reads failing edit distance threshold: ' + str(counts['edit dist'])
+    print '    Reads failing alignment length threshold: ' + str(counts['align len'])
 
     return readsMappedTo16S_1, readsMappedTo16S_2
 
-  def readSingleBAM(self, bamFile, ggIdToTaxonomy):
-    # read compressed BAM file and report basic statistics
+  def readSingleBAM(self, bamFile, ggIdToTaxonomy, maxEditDistance, minLength):
+    # read compressed BAM file
     bam = pysam.Samfile(bamFile, 'rb')
 
-    # find all reads that mapped to a 16S sequence
+    # find primary mappings for each query read
     readsMappedTo16S = {}
-    counts = {'unmapped':0, 'edit dist':0, 'align len':0, 'multiple hits':0}
-    rCount = 0
+    editDists = {}
+    counts = {'unmapped':0, 'edit dist':0, 'align len':0}
+    
+    for read in bam.fetch(until_eof=True):
+      if not read.is_secondary:
+        taxonomy, bMapped = self.processRead(bam, read, ggIdToTaxonomy, maxEditDistance, minLength, counts)
+
+        if bMapped:
+          editDist = read.opt('NM')
+        else:
+          editDist = -1 # flag as unmapped
+        
+        if read.qname in readsMappedTo16S and editDists[read.qname] != -1:
+          # read has multiple primary alignments for different parts of the query sequence
+          # which may indicate it is chimeric. For classification purposes, the LCA of
+          # all primary alignments is taken.
+          lca = LCA(readsMappedTo16S[read.qname].split(';'), taxonomy.split(';'))
+          readsMappedTo16S[read.qname] = ';'.join(lca)
+          editDists[read.qname] = max(editDist, editDists[read.qname])
+        else:
+          readsMappedTo16S[read.qname] = taxonomy
+          editDists[read.qname] = editDist
+          
+    # process secondary mappings for each query read
     for read in bam.fetch(until_eof=True):
       if read.is_secondary:
-        continue
-      
-      rCount += 1
-
-      taxonomy = self.processRead(bam, read, ggIdToTaxonomy, counts)  
-      readsMappedTo16S[read.qname] = taxonomy
-
+        # process primary read
+        taxonomy, bMapped = self.processRead(bam, read, ggIdToTaxonomy, maxEditDistance, minLength)
+        editDist = read.opt('NM')
+        
+        if bMapped and editDist <= editDists[read.qname]:
+          lca = LCA(readsMappedTo16S[read.qname].split(';'), taxonomy.split(';'))
+          readsMappedTo16S[read.qname] = ';'.join(lca)
+       
     bam.close()
-    
-    print 'Number of reads: ' + str(rCount)
-    print '  Reads unmapped: ' + str(counts['unmapped'])
-    print '  Reads with multiple top hits: ' + str(counts['multiple hits'])
-    print '  Reads failing edit distance threshold: ' + str(counts['edit dist'])
-    print '  Reads failing alignment length threshold: ' + str(counts['align len'])
+
+    print '  Number of reads: ' + str(len(readsMappedTo16S))
+    print '    Reads unmapped: ' + str(counts['unmapped'])
+    print '    Reads failing edit distance threshold: ' + str(counts['edit dist'])
+    print '    Reads failing alignment length threshold: ' + str(counts['align len'])
 
     return readsMappedTo16S
 
@@ -165,7 +190,7 @@ class ClassifyBWA(object):
       fout.write(refName + '\t' + taxonomy + '\n')
     fout.close()
 
-  def processPairs(self, pairs, ggIdToTaxonomy, outputDir, prefix):
+  def processPairs(self, pairs, ggIdToTaxonomy, maxEditDistance, minLength, outputDir, prefix):
     for i in xrange(0, len(pairs), 2):
       pair1 = pairs[i]
       pair2 = pairs[i+1]
@@ -177,25 +202,25 @@ class ClassifyBWA(object):
 
       # write out classifications for paired-end reads with both ends identified as 16S
       bamFile = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.16S.bam'
-      readsMappedTo16S_1, readsMappedTo16S_2  = self.readPairedBAM(bamFile, ggIdToTaxonomy)
+      readsMappedTo16S_1, readsMappedTo16S_2  = self.readPairedBAM(bamFile, ggIdToTaxonomy, maxEditDistance, minLength)
 
       output1 = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.16S.tsv'
       output2 = prefix + '.' + pair2Base[0:pair2Base.rfind('.')] + '.intersect.16S.tsv'
-      print 'Paired results written to: ' 
-      print '  ' + output1
-      print '  ' + output2 + '\n'
+      print '  Paired results written to: ' 
+      print '    ' + output1
+      print '    ' + output2 + '\n'
       self.writeClassification(output1, readsMappedTo16S_1)
       self.writeClassification(output2, readsMappedTo16S_2)
       
       # write out classifications for paired-ends reads with only one end identified as 16S
       bamFile = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.16S.bam'
-      readsMappedTo16S = self.readSingleBAM(bamFile, ggIdToTaxonomy)
+      readsMappedTo16S = self.readSingleBAM(bamFile, ggIdToTaxonomy, maxEditDistance, minLength)
       
       output = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.16S.tsv'
-      print 'Singleton results written to: ' + output + '\n'
+      print '  Singleton results written to: ' + output + '\n'
       self.writeClassification(output, readsMappedTo16S)
 
-  def processSingles(self, singles, ggIdToTaxonomy, outputDir, prefix):
+  def processSingles(self, singles, ggIdToTaxonomy, maxEditDistance, minLength, outputDir, prefix):
     for i in xrange(0, len(singles)):
       seqFile = singles[i]
 
@@ -203,13 +228,13 @@ class ClassifyBWA(object):
 
       singleBase = ntpath.basename(seqFile)
       bamFile = prefix + '.' + singleBase[0:singleBase.rfind('.')] + '.16S.bam'
-      readsMappedTo16S = self.readSingleBAM(bamFile, ggIdToTaxonomy)
+      readsMappedTo16S = self.readSingleBAM(bamFile, ggIdToTaxonomy, maxEditDistance, minLength)
 
       output = prefix + '.' + singleBase[0:singleBase.rfind('.')] + '.16S.tsv'
-      print 'Classification results written to: ' + output + '\n'
+      print '  Classification results written to: ' + output + '\n'
       self.writeClassification(output, readsMappedTo16S)
 
-  def run(self, configFile, otu, maxEditDistance, minLength, threads):
+  def run(self, configFile, otu, threads):
     rc = ReadConfig()
     projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = True)
     
@@ -225,11 +250,8 @@ class ClassifyBWA(object):
       else:
         sys.exit()
 
-    self.maxEditDistance = maxEditDistance
-    self.minLength = minLength
-
     taxonomyFile = self.taxonomyFile.replace('##', str(otu), 1)
-    ggIdToTaxonomy = self.readTaxonomy(taxonomyFile)
+    ggIdToTaxonomy = readTaxonomy(taxonomyFile)
 
     ggDB = self.ggDB.replace('##', str(otu), 1)
     
@@ -283,12 +305,14 @@ class ClassifyBWA(object):
       prefix = outputDir + sample
       pairs = sampleParams[sample]['pairs']
       singles = sampleParams[sample]['singles']
+      maxEditDistance = sampleParams[sample]['edit_dist']
+      minLength = sampleParams[sample]['min_align_len']
 
       # identify 16S sequences in paired-end reads
-      self.processPairs(pairs, ggIdToTaxonomy, outputDir, prefix)
+      self.processPairs(pairs, ggIdToTaxonomy, maxEditDistance, minLength, outputDir, prefix)
 
       # identify 16S sequences in single-end reads
-      self.processSingles(singles, ggIdToTaxonomy, outputDir, prefix)
+      self.processSingles(singles, ggIdToTaxonomy, maxEditDistance, minLength, outputDir, prefix)
 
       print ''
 
@@ -297,11 +321,9 @@ if __name__ == '__main__':
                                       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument('config_file', help='project config file.')
   parser.add_argument('otu', help='GreenGenes DB to use for classification (choices: 94, 97, 99)', type=int, choices=[94, 97, 99], default=97)
-  parser.add_argument('-e', '--edit_distance', help='maximum edit distance before treating a read as unmapped (default: 10)', type=int, default=10)
-  parser.add_argument('-l', '--min_length', help='minimum required alignment length to tread read as classified (default: 90)', type=int, default=90)
   parser.add_argument('-t', '--threads', help='number of threads', type=int, default = 1)
 
   args = parser.parse_args()
 
   classifyBWA = ClassifyBWA()
-  classifyBWA.run(args.config_file, args.otu, args.edit_distance, args.min_length, args.threads)
+  classifyBWA.run(args.config_file, args.otu, args.threads)

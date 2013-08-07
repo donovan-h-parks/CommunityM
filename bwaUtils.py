@@ -31,50 +31,28 @@ __email__ = 'donovan.parks@gmail.com'
 __status__ = 'Development'
 
 import os
-import tempfile
-
-def maxAlignments():
-  return 1000
 
 def mapPair(db, file1, file2, bamPrefix, threads):
-  _, tmpAlnFile1 = tempfile.mkstemp()
-  _, tmpAlnFile2 = tempfile.mkstemp()
-
   print 'Processing pair: ' + file1 + ', ' + file2
 
   print ''
-  print 'Aligning pairs: '
-  os.system('bwa aln -t ' + str(threads) + ' ' + db + ' ' + file1 + ' > ' + tmpAlnFile1)
-  os.system('bwa aln -t ' + str(threads) + ' ' + db + ' ' + file2 + ' > ' + tmpAlnFile2)
-
-  print ''
-  print 'Mapping reads:'
-  os.system('bwa sampe -n ' + str(maxAlignments()) + ' -N ' + str(maxAlignments()) + ' ' + db + ' ' + tmpAlnFile1 + ' ' + tmpAlnFile2 + ' ' + file1 + ' ' + file2 + '| samtools view -Subh - | samtools sort - ' + bamPrefix)
+  print 'Aligning pairs with bwa-mem: '
+  os.system('bwa mem -a -t ' + str(threads) + ' ' + db + ' ' + file1 + ' ' + file2 + ' | samtools view -Subh - | samtools sort - ' + bamPrefix)
 
   print ''
   print 'Indexing BAM file.'
   os.system('samtools index ' + bamPrefix + '.bam')
   print ''
-
-  os.remove(tmpAlnFile1)
-  os.remove(tmpAlnFile2)
-
+  
 def mapSingle(db, filename, bamPrefix, threads):
-  _, tmpAlnFile = tempfile.mkstemp()
-
   print 'Processing single-ended read file: ' + filename
 
   print ''
-  print 'Aligning reads: '
-  os.system('bwa aln -t ' + str(threads) + ' ' + db + ' ' + filename + ' > ' + tmpAlnFile)
-
-  print ''
-  print 'Mapping reads:'
-  os.system('bwa samse -n ' + str(maxAlignments()) + ' ' + db + ' ' + tmpAlnFile + ' ' + filename + '| samtools view -Subh - | samtools sort - ' + bamPrefix)
+  print 'Aligning with bwa-mem: '
+  os.system('bwa mem -a -t ' + str(threads) + ' ' + db + ' ' + filename + ' | samtools view -Subh - | samtools sort - ' + bamPrefix)
 
   print ''
   print 'Indexing BAM file.'
   os.system('samtools index ' + bamPrefix + '.bam')
   print ''
 
-  os.remove(tmpAlnFile)

@@ -318,7 +318,6 @@ class IdentifyRecoverable16S(object):
           refSeqHit = referenceSeqHits[ggId]
 
           for singleFile in refSeqHit.singles:
-            print singleFile
             for readId in refSeqHit.singles[singleFile]:
               singletonsOut.write('>' + readId + '\n')
               singletonsOut.write(seqsInFiles[singleFile][readId] + '\n')
