@@ -38,6 +38,8 @@ from seqUtils import extractSeqs
 
 class Extract16S(object):
   def __init__(self):
+    self.bQuiet = False
+    
     self.bacteriaModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/dev/models/SSU_bacteria.hmm'
     self.bacteriaRevCompModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/dev/models/SSU_bacteria.revComp.hmm'
 

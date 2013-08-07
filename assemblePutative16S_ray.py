@@ -54,7 +54,7 @@ class AssemblePutative16S(object):
     projectParams, _ = rc.readConfig(configFile, outputDirExists = True)
 
     # create directory to store putative 16S genes
-    dirPutative16S = projectParams['output_dir'] + 'putative16S/'
+    dirPutative16S = projectParams['output_dir'] + 'putativeSSU/'
     if not os.path.exists(dirPutative16S):
       print '[Error] Putative 16S gene reads expected in: ' + dirPutative16S
       sys.exit()
