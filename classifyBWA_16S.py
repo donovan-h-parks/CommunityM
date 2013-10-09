@@ -53,11 +53,11 @@ class ClassifyBWA(object):
       if counts != None:
         counts['unmapped'] += 1
       return self.unmappedStr, bMapped
-    elif (read.alen < minLength):
+    elif (read.alen < minLength*read.rlen):
       if counts != None:
         counts['align len'] += 1
       return self.unmappedStr, bMapped
-    elif (read.opt('NM') > maxEditDistance):
+    elif (read.opt('NM') > maxEditDistance*read.rlen):
       if counts != None:
         counts['edit dist'] += 1
       return self.unmappedStr, bMapped
@@ -99,7 +99,7 @@ class ClassifyBWA(object):
           # all primary alignments is taken.
           lca = LCA(readsMappedTo16S[qname].split(';'), taxonomy.split(';'))
           readsMappedTo16S[qname] = ';'.join(lca)
-          editDists[qname] = max(editDist, editDists[read.qname])
+          editDists[qname] = max(editDist, editDists[qname])
         else:
           readsMappedTo16S[qname] = taxonomy
           editDists[qname] = editDist

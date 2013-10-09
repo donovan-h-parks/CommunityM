@@ -24,6 +24,10 @@ class CreateHMMs(object):
 
     self.eukSeqs = '/srv/whitlam/bio/db/mothur/silva/silva.eukarya.fasta'
 
+    self.bacLSU = '/srv/whitlam/bio/db/Silva/release_115/LSUREF_115_bac_align_trunc.filter.fasta'
+    self.arLSU = '/srv/whitlam/bio/db/Silva/release_115/LSUREF_115_ar_align_trunc.filter.fasta'
+    self.eukLSU = '/srv/whitlam/bio/db/Silva/release_115/LSUREF_115_euk_align_trunc.filter.fasta'
+
     self.nuc = {'A':'T','T':'A','G':'C','C':'G','K':'M','M':'K','R':'Y','Y':'R','S':'W','W':'W','B':'V','V':'B','H':'G','D':'C','X':'N','N':'N','*':'N','-':'-', '.':'-'}
     pass
 
@@ -105,6 +109,20 @@ class CreateHMMs(object):
     os.system('hmmbuild --cpu ' + str(threads) + ' --informat afa ' + output_dir + '/SSU_euk.hmm ' + self.eukSeqs)
     os.system('hmmbuild --cpu ' + str(threads) + ' --informat afa ' + output_dir + '/SSU_euk.revComp.hmm ' + revComplementFile)
 
+    self.revComplementFastaFile(self.bacLSU)
+    revComplementFile = self.bacLSU[0:self.bacLSU.rfind('.')] + '.revComp.' + self.bacLSU[self.bacLSU.rfind('.')+1:]
+    os.system('hmmbuild --cpu ' + str(threads) + ' --informat afa ' + output_dir + '/LSU_bacteria.hmm ' + self.bacLSU)
+    os.system('hmmbuild --cpu ' + str(threads) + ' --informat afa ' + output_dir + '/LSU_bacteria.revComp.hmm ' + revComplementFile)
+
+    self.revComplementFastaFile(self.arLSU)
+    revComplementFile = self.arLSU[0:self.arLSU.rfind('.')] + '.revComp.' + self.arLSU[self.arLSU.rfind('.')+1:]
+    os.system('hmmbuild --cpu ' + str(threads) + ' --informat afa ' + output_dir + '/LSU_archaea.hmm ' + self.arLSU)
+    os.system('hmmbuild --cpu ' + str(threads) + ' --informat afa ' + output_dir + '/LSU_archaea.revComp.hmm ' + revComplementFile)
+
+    self.revComplementFastaFile(self.eukLSU)
+    revComplementFile = self.eukLSU[0:self.eukLSU.rfind('.')] + '.revComp.' + self.eukLSU[self.eukLSU.rfind('.')+1:]
+    os.system('hmmbuild --cpu ' + str(threads) + ' --informat afa ' + output_dir + '/LSU_euk.hmm ' + self.eukLSU)
+    os.system('hmmbuild --cpu ' + str(threads) + ' --informat afa ' + output_dir + '/LSU_euk.revComp.hmm ' + revComplementFile)
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description="Create HMMs.", formatter_class=argparse.ArgumentDefaultsHelpFormatter)

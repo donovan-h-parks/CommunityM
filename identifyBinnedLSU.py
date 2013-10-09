@@ -18,7 +18,7 @@
 ###############################################################################
 
 """
-Identify 16S sequences within bins.
+Identify LSU sequences within bins.
 """
 
 __author__ = 'Donovan Parks'
@@ -32,9 +32,9 @@ import os
 import sys
 import argparse
 
-from extractHMM_16S import Extract16S
+from extractHMM_LSU import ExtractLSU
 
-class IdentifyBinned16S(object):
+class IdentifyBinnedLSU(object):
   def __init__(self):
     pass
 
@@ -199,10 +199,10 @@ class IdentifyBinned16S(object):
       print '[Error] No contigs/scaffolds identified in bins. Check the extension of used to identify genome bins.'
       sys.exit()
 
-    # identify 16S reads from contigs/scaffolds
-    print 'Identifying 16S genes on assembled contigs/scaffolds.'
-    extract16S = Extract16S()
-    extract16S.hmmSearch(contigFile, threads, evalueThreshold, outputDir + '/identified16S')
+    # identify LSU reads from contigs/scaffolds
+    print 'Identifying LSU genes on assembled contigs/scaffolds.'
+    extractLSU = ExtractLSU()
+    extractLSU.hmmSearch(contigFile, threads, evalueThreshold, outputDir + '/identified')
 
     # read HMM hits
     print 'Parsing HMM results.'
@@ -211,14 +211,14 @@ class IdentifyBinned16S(object):
       hits = {}
 
       # forward hits
-      seqInfo = self.readHits(outputDir + '/identified16S' + '.' + domain + '.txt', domain, evalueThreshold)
+      seqInfo = self.readHits(outputDir + '/identified.lsu' + '.' + domain + '.txt', domain, evalueThreshold)
       if len(seqInfo) > 0:
         for seqId, seqHits in seqInfo.iteritems():
           for hit in seqHits:
             self.addHit(hits, seqId, hit, concatenateThreshold)
 
       # reverse complement hits
-      seqInfo = self.readHits(outputDir + '/identified16S' + '.' + domain + '.rev_comp.txt', domain, evalueThreshold, True)
+      seqInfo = self.readHits(outputDir + '/identified.lsu' + '.' + domain + '.rev_comp.txt', domain, evalueThreshold, True)
       if len(seqInfo) > 0:
         for seqId, seqHits in seqInfo.iteritems():
           for hit in seqHits:
@@ -235,13 +235,13 @@ class IdentifyBinned16S(object):
 
         self.addDomainHit(bestHits, seqId, info)
 
-    # write summary file and putative 16S genes to file
+    # write summary file and putative LSU genes to file
     print 'Writing results to file.'
-    summaryFile = outputDir + '/identified16S.tsv'
+    summaryFile = outputDir + '/identified_LSU.tsv'
     summaryOut = open(summaryFile, 'w')
-    summaryOut.write('Bin Id\tSeq. Id\tHMM model\ti-Evalue\tStart hit\tEnd hit\t16S/18S gene length\tRev. Complement\tContig/Scaffold length\n')
+    summaryOut.write('Bin Id\tSeq. Id\tHMM model\ti-Evalue\tStart hit\tEnd hit\tLSU gene length\tRev. Complement\tContig/Scaffold length\n')
 
-    seqFile = outputDir + '/identified16S.fna'
+    seqFile = outputDir + '/identified_LSU.fna'
     seqOut = open(seqFile, 'w')
 
     seqs = self.readFasta(contigFile)
@@ -275,12 +275,12 @@ class IdentifyBinned16S(object):
     seqOut.close()
 
     print ''
-    print 'Identified ' + str(len(bestHits)) + ' putative 16S genes:'
+    print 'Identified ' + str(len(bestHits)) + ' putative LSU genes:'
     print '  Summary of identified hits written to: ' + summaryFile
-    print '  Putative 16S sequences written to: ' + seqFile
+    print '  Putative LSU sequences written to: ' + seqFile
 
 if __name__ == '__main__':
-  parser = argparse.ArgumentParser(description="Identify 16S sequences within bins.",
+  parser = argparse.ArgumentParser(description="Identify LSU sequences within bins.",
                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   parser.add_argument('contig_file', help='FASTA file of assembled contigs/scaffolds')
@@ -292,9 +292,7 @@ if __name__ == '__main__':
   parser.add_argument('-e', '--evalue', help='e-value threshold for identifying hits', type=float, default = 1e-5)
   parser.add_argument('-c', '--concatenate', help='concatenate hits that are within the specified number of base pairs', type=int, default = 100)
 
-  parser.add_argument('--version', help='show version number of program', action='version', version='Extract 16S using HMMs v0.0.1')
-
   args = parser.parse_args()
 
-  identifyBinned16S = IdentifyBinned16S()
-  identifyBinned16S.run(args.contig_file, args.bin_dir, args.output_dir, args.extension, args.threads, args.evalue, args.concatenate)
+  identifyBinnedLSU = IdentifyBinnedLSU()
+  identifyBinnedLSU.run(args.contig_file, args.bin_dir, args.output_dir, args.extension, args.threads, args.evalue, args.concatenate)

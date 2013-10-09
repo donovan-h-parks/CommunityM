@@ -37,7 +37,7 @@ import operator
 import ntpath
 
 from readConfig import ReadConfig
-from seqUtils import extractReads
+from seqUtils import extractSeqs
 
 class ReferenceSeqHit(object):
   def __init__(self, refId):
@@ -152,10 +152,10 @@ class IdentifyRecoverable16S(object):
 
     if not self.bQuiet:
       print '    Classified reads: ' + str(len(classifications1) + len(classifications2))
-      print '      Singletons: ' + str(numSingletons)
-      print '      Reads in pairs with similar classifications: ' + str(2*numPairsInAgreement)
-      print '      Reads in pairs with different classifications: ' + str(2*numPairsInDisagreement)
-      print '      Unclassified/unmapped reads: ' + str(numUnclassified)
+      print '      Singletons: ' + str(numSingletons) + ' (%.2f' % (numSingletons*100.0/(len(classifications1) + len(classifications2))) + ')'
+      print '      Reads in pairs with similar classifications: ' + str(2*numPairsInAgreement) + ' (%.2f' % (2*numPairsInAgreement*100.0/(len(classifications1) + len(classifications2))) + ')'
+      print '      Reads in pairs with different classifications: ' + str(2*numPairsInDisagreement) + ' (%.2f' % (2*numPairsInDisagreement*100.0/(len(classifications1) + len(classifications2))) + ')'
+      print '      Unclassified/unmapped reads: ' + str(numUnclassified) + ' (%.2f' % (numUnclassified*100.0/(len(classifications1) + len(classifications2))) + ')'
       print ''
 
   def addSingletons(self, referenceSeqHits, single, classificationFile):
@@ -248,6 +248,7 @@ class IdentifyRecoverable16S(object):
 
   def extractClusteredReads(self, clusters, referenceSeqHits, minSeqCutoff):
     readsInFiles = {}
+
     for cluster in clusters:
       hits = cluster[0]
       ggIds = cluster[1]
@@ -264,8 +265,11 @@ class IdentifyRecoverable16S(object):
 
     seqsInFiles = {}
     for filename in readsInFiles:
-      seqsInFiles[filename] = extractReads(filename, readsInFiles[filename])
-
+      seqIds = set()
+      for readId in  readsInFiles[filename]:
+        seqIds.add(readId[0:readId.rfind('/')])
+      seqsInFiles[filename] = extractSeqs(filename, seqIds)
+      
     return seqsInFiles
 
   def extractRecoverable16S(self, referenceSeqHits, neighbours, minSeqCutoff, outputDir):
@@ -312,38 +316,32 @@ class IdentifyRecoverable16S(object):
         singletonsOut = open(outputDir + ggIds[0] + '.singletons.fasta', 'w')
         pairOut1 = open(outputDir + ggIds[0] + '.1.fasta', 'w')
         pairOut2 = open(outputDir + ggIds[0] + '.2.fasta', 'w')
-        allOut = open(outputDir + ggIds[0] + '.all.fasta', 'w')
-
+        
         for ggId in ggIds:
           refSeqHit = referenceSeqHits[ggId]
 
           for singleFile in refSeqHit.singles:
             for readId in refSeqHit.singles[singleFile]:
+              seqId = readId[0:readId.rfind('/')]
               singletonsOut.write('>' + readId + '\n')
-              singletonsOut.write(seqsInFiles[singleFile][readId] + '\n')
+              singletonsOut.write(seqsInFiles[singleFile][seqId][1] + '\n')
 
-              allOut.write('>' + readId + '\n')
-              allOut.write(seqsInFiles[singleFile][readId] + '\n')
-
-          for pairFile in refSeqHit.pairs:
+          for pairFile in sorted(list(refSeqHit.pairs)):
             for readId in sorted(list(refSeqHit.pairs[pairFile])): # ensure reads are in the same order for both files
+              seqId = readId[0:readId.rfind('/')]
               if '/1' in readId:
                 pairOut1.write('>' + readId + '\n')
-                pairOut1.write(seqsInFiles[pairFile][readId] + '\n')
+                pairOut1.write(seqsInFiles[pairFile][seqId][1] + '\n')
               elif '/2' in readId:
                 pairOut2.write('>' + readId + '\n')
-                pairOut2.write(seqsInFiles[pairFile][readId] + '\n')
+                pairOut2.write(seqsInFiles[pairFile][seqId][1] + '\n')
               else:
                 print "[Error] Unrecognized file format. Pairs must be denoted by '/1' and '/2'"
                 sys.exit()
 
-              allOut.write('>' + readId + '\n')
-              allOut.write(seqsInFiles[pairFile][readId] + '\n')
-
         singletonsOut.close()
         pairOut1.close()
         pairOut2.close()
-        allOut.close()
 
     if not self.bQuiet:
       print ''

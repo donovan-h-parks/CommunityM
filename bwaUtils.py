@@ -35,6 +35,11 @@ import os
 def mapPair(db, file1, file2, bamPrefix, threads):
   print 'Processing pair: ' + file1 + ', ' + file2
 
+  if not os.path.exists(db + '.bwt'):
+    print ''
+    print 'Indexing database file: '
+    os.system('bwa index ' + db)
+
   print ''
   print 'Aligning pairs with bwa-mem: '
   os.system('bwa mem -a -t ' + str(threads) + ' ' + db + ' ' + file1 + ' ' + file2 + ' | samtools view -Subh - | samtools sort - ' + bamPrefix)
@@ -43,9 +48,14 @@ def mapPair(db, file1, file2, bamPrefix, threads):
   print 'Indexing BAM file.'
   os.system('samtools index ' + bamPrefix + '.bam')
   print ''
-  
+
 def mapSingle(db, filename, bamPrefix, threads):
   print 'Processing single-ended read file: ' + filename
+
+  if not os.path.exists(db + '.bwt'):
+    print ''
+    print 'Indexing database file: '
+    os.system('bwa index ' + db)
 
   print ''
   print 'Aligning with bwa-mem: '

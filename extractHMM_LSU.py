@@ -18,7 +18,7 @@
 ###############################################################################
 
 """
-Extract 16S/18S sequences from metagenomic data using HMMs.
+Extract LSU sequences from metagenomic data using HMMs.
 """
 
 __author__ = 'Donovan Parks'
@@ -36,18 +36,18 @@ import argparse
 from readConfig import ReadConfig
 from seqUtils import extractSeqs
 
-class Extract16S(object):
+class ExtractLSU(object):
   def __init__(self):
     self.bQuiet = False
 
-    self.bacteriaModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/0.0.6/models/SSU_bacteria.hmm'
-    self.bacteriaRevCompModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/0.0.6/models/SSU_bacteria.revComp.hmm'
+    self.bacteriaModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/dev/models/LSU_bacteria.hmm'
+    self.bacteriaRevCompModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/dev/models/LSU_bacteria.revComp.hmm'
 
-    self.archaeaModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/0.0.6/models/SSU_archaea.hmm'
-    self.archaeaRevCompModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/0.0.6/models/SSU_archaea.revComp.hmm'
+    self.archaeaModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/dev/models/LSU_archaea.hmm'
+    self.archaeaRevCompModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/dev/models/LSU_archaea.revComp.hmm'
 
-    self.eukModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/0.0.6/models/SSU_euk.hmm'
-    self.eukRevCompModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/0.0.6/models/SSU_euk.revComp.hmm'
+    self.eukModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/dev/models/LSU_euk.hmm'
+    self.eukRevCompModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/dev/models/LSU_euk.revComp.hmm'
 
     pass
 
@@ -64,7 +64,7 @@ class Extract16S(object):
 
   def hmmSearch(self, seqFile, threads, evalue, outputPrefix):
     if not self.bQuiet:
-      print '    Identifying bacterial 16S'
+      print '    Identifying bacterial LSU sequences'
 
     if seqFile.endswith('gz'):
       pipe = 'zcat ' + seqFile + ' | '
@@ -74,18 +74,18 @@ class Extract16S(object):
     if '.fq' in seqFile or '.fastq' in seqFile:
       pipe += 'fastq2fasta - | '
 
-    os.system(pipe + 'hmmsearch --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.bacteria.txt --tblout ' + outputPrefix + '.bacteria.table.txt -E ' + str(evalue) + ' ' + self.bacteriaModelFile + ' -')
-    os.system(pipe + 'hmmsearch --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.bacteria.rev_comp.txt --tblout ' + outputPrefix + '.bacteria.table.rev_comp.txt -E ' + str(evalue) + ' ' + self.bacteriaRevCompModelFile + ' -')
+    os.system(pipe + 'hmmsearch --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.lsu.bacteria.txt --tblout ' + outputPrefix + '.lsu.bacteria.table.txt -E ' + str(evalue) + ' ' + self.bacteriaModelFile + ' -')
+    os.system(pipe + 'hmmsearch --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.lsu.bacteria.rev_comp.txt --tblout ' + outputPrefix + '.lsu.bacteria.table.rev_comp.txt -E ' + str(evalue) + ' ' + self.bacteriaRevCompModelFile + ' -')
 
     if not self.bQuiet:
-      print '    Identifying archaeal 16S'
-    os.system(pipe + 'hmmsearch --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.archaea.txt --tblout ' + outputPrefix + '.archaea.table.txt -E ' + str(evalue) + ' ' + self.archaeaModelFile + ' -')
-    os.system(pipe + 'hmmsearch --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.archaea.rev_comp.txt --tblout ' + outputPrefix + '.archaea.table.rev_comp.txt -E ' + str(evalue) + ' ' + self.archaeaRevCompModelFile + ' -')
+      print '    Identifying archaeal LSU sequences'
+    os.system(pipe + 'hmmsearch --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.lsu.archaea.txt --tblout ' + outputPrefix + '.lsu.archaea.table.txt -E ' + str(evalue) + ' ' + self.archaeaModelFile + ' -')
+    os.system(pipe + 'hmmsearch --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.lsu.archaea.rev_comp.txt --tblout ' + outputPrefix + '.lsu.archaea.table.rev_comp.txt -E ' + str(evalue) + ' ' + self.archaeaRevCompModelFile + ' -')
 
     if not self.bQuiet:
-      print '    Identifying eukaryotic 18S'
-    os.system(pipe + 'hmmsearch --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.euk.txt --tblout ' + outputPrefix + '.euk.table.txt -E ' + str(evalue) + ' ' + self.eukModelFile + ' -')
-    os.system(pipe + 'hmmsearch --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.euk.rev_comp.txt --tblout ' + outputPrefix + '.euk.table.rev_comp.txt -E ' + str(evalue) + ' ' + self.eukRevCompModelFile + ' -')
+      print '    Identifying eukaryotic LSU sequences'
+    os.system(pipe + 'hmmsearch --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.lsu.euk.txt --tblout ' + outputPrefix + '.lsu.euk.table.txt -E ' + str(evalue) + ' ' + self.eukModelFile + ' -')
+    os.system(pipe + 'hmmsearch --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.lsu.euk.rev_comp.txt --tblout ' + outputPrefix + '.lsu.euk.table.rev_comp.txt -E ' + str(evalue) + ' ' + self.eukRevCompModelFile + ' -')
 
     if not self.bQuiet:
         print ''
@@ -96,10 +96,10 @@ class Extract16S(object):
       pair2 = pairs[i+1]
 
       if not self.bQuiet:
-        print 'Identifying 16S/18S sequences in paired-end reads: ' + pair1 + ', ' + pair2
+        print 'Identifying LSU sequences in paired-end reads: ' + pair1 + ', ' + pair2
 
-      outputPrefix1 = outputDir + 'extracted/' + sample + '.' + pair1[pair1.rfind('/')+1:pair1.rfind('.')]
-      outputPrefix2 = outputDir + 'extracted/' + sample + '.' + pair2[pair2.rfind('/')+1:pair2.rfind('.')]
+      outputPrefix1 = outputDir + 'extracted_lsu/' + sample + '.' + pair1[pair1.rfind('/')+1:pair1.rfind('.')]
+      outputPrefix2 = outputDir + 'extracted_lsu/' + sample + '.' + pair2[pair2.rfind('/')+1:pair2.rfind('.')]
 
       if not self.bQuiet:
         print '  Processing file: ' + pair1
@@ -110,23 +110,23 @@ class Extract16S(object):
       self.hmmSearch(pair2, threads, evalue, outputPrefix2)
 
       # reads hits
-      hitsBacteria1 = self.getHits(outputPrefix1 + '.bacteria.table.txt')
-      hitsRevCompBacteria1 = self.getHits(outputPrefix1 + '.bacteria.table.rev_comp.txt')
+      hitsBacteria1 = self.getHits(outputPrefix1 + '.lsu.bacteria.table.txt')
+      hitsRevCompBacteria1 = self.getHits(outputPrefix1 + '.lsu.bacteria.table.rev_comp.txt')
 
-      hitsArchaea1 = self.getHits(outputPrefix1 + '.archaea.table.txt')
-      hitsRevCompArcheae1 = self.getHits(outputPrefix1 + '.archaea.table.rev_comp.txt')
+      hitsArchaea1 = self.getHits(outputPrefix1 + '.lsu.archaea.table.txt')
+      hitsRevCompArcheae1 = self.getHits(outputPrefix1 + '.lsu.archaea.table.rev_comp.txt')
 
-      hitsEuk1 = self.getHits(outputPrefix1 + '.euk.table.txt')
-      hitsRevCompEuk1 = self.getHits(outputPrefix1 + '.euk.table.rev_comp.txt')
+      hitsEuk1 = self.getHits(outputPrefix1 + '.lsu.euk.table.txt')
+      hitsRevCompEuk1 = self.getHits(outputPrefix1 + '.lsu.euk.table.rev_comp.txt')
 
-      hitsBacteria2 = self.getHits(outputPrefix2 + '.bacteria.table.txt')
-      hitsRevCompBacteria2 = self.getHits(outputPrefix2 + '.bacteria.table.rev_comp.txt')
+      hitsBacteria2 = self.getHits(outputPrefix2 + '.lsu.bacteria.table.txt')
+      hitsRevCompBacteria2 = self.getHits(outputPrefix2 + '.lsu.bacteria.table.rev_comp.txt')
 
-      hitsArchaea2 = self.getHits(outputPrefix2 + '.archaea.table.txt')
-      hitsRevCompArcheae2 = self.getHits(outputPrefix2 + '.archaea.table.rev_comp.txt')
+      hitsArchaea2 = self.getHits(outputPrefix2 + '.lsu.archaea.table.txt')
+      hitsRevCompArcheae2 = self.getHits(outputPrefix2 + '.lsu.archaea.table.rev_comp.txt')
 
-      hitsEuk2 = self.getHits(outputPrefix2 + '.euk.table.txt')
-      hitsRevCompEuk2 = self.getHits(outputPrefix2 + '.euk.table.rev_comp.txt')
+      hitsEuk2 = self.getHits(outputPrefix2 + '.lsu.euk.table.txt')
+      hitsRevCompEuk2 = self.getHits(outputPrefix2 + '.lsu.euk.table.rev_comp.txt')
 
       # combine hits
       hits1 = hitsBacteria1.union(hitsRevCompBacteria1).union(hitsArchaea1).union(hitsRevCompArcheae1).union(hitsEuk1).union(hitsRevCompEuk1)
@@ -153,14 +153,6 @@ class Extract16S(object):
 
       # extract reads with hits
       if not self.bQuiet:
-        bacHits = hitsBacteria1.union(hitsRevCompBacteria1).union(hitsBacteria2).union(hitsRevCompBacteria2)
-        arHits = hitsArchaea1.union(hitsRevCompArcheae1).union(hitsArchaea2).union(hitsRevCompArcheae2)
-        eukHits = hitsEuk1.union(hitsRevCompEuk1).union(hitsEuk2).union(hitsRevCompEuk2)
-
-        print '  Unique bacterial hits: ' + str(len(bacHits.difference(arHits.union(eukHits))))
-        print '  Unique archaeal hits: ' + str(len(arHits.difference(bacHits.union(eukHits))))
-        print '  Unique eukaryotic hits: ' + str(len(eukHits.difference(bacHits.union(arHits))))
-        print ''
         print '  Extracting putative 16S/18S reads:'
       hitUnion = hits1.union(hits2)
 
@@ -168,7 +160,7 @@ class Extract16S(object):
       seqs2 = extractSeqs(pair2, hitUnion)
 
       # create file with all 16S/18S sequences
-      allSeqFile = outputPrefix1 + '.all.SSU.fasta'
+      allSeqFile = outputPrefix1 + '.lsu.all.SSU.fasta'
       fout = open(allSeqFile, 'w')
       for seqId in hits1:
         fout.write('>' + seqs1[seqId][0] + '\n')
@@ -181,30 +173,30 @@ class Extract16S(object):
       fout.close()
 
       # create paired-end files where at least one read maps to a 16S/18S
-      pair1FileUnion = outputPrefix1 + '.union.SSU.fasta'
+      pair1FileUnion = outputPrefix1 + '.lsu.union.SSU.fasta'
       fout = open(pair1FileUnion, 'w')
       for seqId in hitUnion:
         fout.write('>' + seqs1[seqId][0] + '\n')
         fout.write(seqs1[seqId][1] + '\n')
       fout.close()
 
-      pair2FileUnion = outputPrefix2 + '.union.SSU.fasta'
+      pair2FileUnion = outputPrefix2 + '.lsu.union.SSU.fasta'
       fout = open(pair2FileUnion, 'w')
       for seqId in hitUnion:
         fout.write('>' + seqs2[seqId][0] + '\n')
         fout.write(seqs2[seqId][1] + '\n')
       fout.close()
 
-      # create paired-end files where both read maps to a 16S/18S
+      # create paired-end files where at least one read maps to a 16S/18S
       hitIntersection = hits1.intersection(hits2)
-      pair1FileIntersect = outputPrefix1 + '.intersect.SSU.fasta'
+      pair1FileIntersect = outputPrefix1 + '.lsu.intersect.SSU.fasta'
       fout = open(pair1FileIntersect, 'w')
       for seqId in hitIntersection:
         fout.write('>' + seqs1[seqId][0] + '\n')
         fout.write(seqs1[seqId][1] + '\n')
       fout.close()
 
-      pair2FileIntersect = outputPrefix2 + '.intersect.SSU.fasta'
+      pair2FileIntersect = outputPrefix2 + '.lsu.intersect.SSU.fasta'
       fout = open(pair2FileIntersect, 'w')
       for seqId in hitIntersection:
         fout.write('>' + seqs2[seqId][0] + '\n')
@@ -213,7 +205,7 @@ class Extract16S(object):
 
       # create file where only one read maps to a 16S/18S
       hitDiff1 = hits1.difference(hits2)
-      diffFile = outputPrefix1 + '.difference.SSU.fasta'
+      diffFile = outputPrefix1 + '.lsu.difference.SSU.fasta'
       fout = open(diffFile, 'w')
       for seqId in hitDiff1:
         r = seqs1[seqId][0]     # strip read identifier as these will be mapped as singletons
@@ -256,19 +248,19 @@ class Extract16S(object):
       if not self.bQuiet:
         print 'Identifying 16S/18S sequences in single-end reads: ' + seqFile
 
-      outputPrefix = outputDir + 'extracted/' + sample + '.' + seqFile[seqFile.rfind('/')+1:seqFile.rfind('.')]
+      outputPrefix = outputDir + 'extracted_lsu/' + sample + '.' + seqFile[seqFile.rfind('/')+1:seqFile.rfind('.')]
 
       self.hmmSearch(seqFile, threads, evalue, outputPrefix)
 
       # reads hits
-      hitsBacteria = self.getHits(outputPrefix + '.bacteria.table.txt')
-      hitsRevCompBacteria = self.getHits(outputPrefix + '.bacteria.table.rev_comp.txt')
+      hitsBacteria = self.getHits(outputPrefix + '.lsu.bacteria.table.txt')
+      hitsRevCompBacteria = self.getHits(outputPrefix + '.lsu.bacteria.table.rev_comp.txt')
 
-      hitsArchaea = self.getHits(outputPrefix + '.archaea.table.txt')
-      hitsRevCompArcheae = self.getHits(outputPrefix + '.archaea.table.rev_comp.txt')
+      hitsArchaea = self.getHits(outputPrefix + '.lsu.archaea.table.txt')
+      hitsRevCompArcheae = self.getHits(outputPrefix + '.lsu.archaea.table.rev_comp.txt')
 
-      hitsEuk = self.getHits(outputPrefix + '.euk.table.txt')
-      hitsRevCompEuk = self.getHits(outputPrefix + '.euk.table.rev_comp.txt')
+      hitsEuk = self.getHits(outputPrefix + '.lsu.euk.table.txt')
+      hitsRevCompEuk = self.getHits(outputPrefix + '.lsu.euk.table.rev_comp.txt')
 
       hits = hitsBacteria.union(hitsRevCompBacteria).union(hitsArchaea).union(hitsRevCompArcheae).union(hitsEuk).union(hitsRevCompEuk)
 
@@ -284,21 +276,11 @@ class Extract16S(object):
         print '  Identified 16S/18S reads: ' + str(len(hits)) + ' reads'
         print ''
 
-        bacHits = hitsBacteria.union(hitsRevCompBacteria)
-        arHits = hitsArchaea.union(hitsRevCompArcheae)
-        eukHits = hitsEuk.union(hitsRevCompEuk)
-
-        print '  Unique bacterial hits: ' + str(len(bacHits.difference(arHits.union(eukHits))))
-        print '  Unique archaeal hits: ' + str(len(arHits.difference(bacHits.union(eukHits))))
-        print '  Unique eukaryotic hits: ' + str(len(eukHits.difference(bacHits.union(arHits))))
-        print ''
-        print '  Extracting putative 16S/18S reads:'
-
       # extract reads with hits
       seqs = extractSeqs(seqFile, hits)
 
       # create file with all 16S sequences
-      allSeqFile = outputPrefix + '.SSU.fasta'
+      allSeqFile = outputPrefix + '.lsu.SSU.fasta'
       fout = open(allSeqFile, 'w')
       for seqId in hits:
         r = seqs[seqId][0]     # strip read identifier as these will be mapped as singletons
@@ -315,11 +297,8 @@ class Extract16S(object):
 
   def run(self, configFile, threads, evalue, bQuiet):
     rc = ReadConfig()
-    projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = False)
-
-    print '\nProcessing %s sample(s).\n' % len(sampleParams)
-
-    os.makedirs(projectParams['output_dir'] + 'extracted')
+    projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = True)
+    os.makedirs(projectParams['output_dir'] + 'extracted_lsu')
 
     self.bQuiet = bQuiet
 
@@ -334,7 +313,7 @@ class Extract16S(object):
       self.processSingles(singles, threads, evalue, projectParams['output_dir'], sample)
 
 if __name__ == '__main__':
-  parser = argparse.ArgumentParser(description="Extract 16S/18S sequences from metagenomic data using HMMs.",
+  parser = argparse.ArgumentParser(description="Extract LSU sequences from metagenomic data using HMMs.",
                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   parser.add_argument('config_file', help='project config file.')
@@ -345,5 +324,5 @@ if __name__ == '__main__':
 
   args = parser.parse_args()
 
-  extract16S = Extract16S()
-  extract16S.run(args.config_file, args.threads, args.evalue, args.quiet)
+  extractLSU = ExtractLSU()
+  extractLSU.run(args.config_file, args.threads, args.evalue, args.quiet)
