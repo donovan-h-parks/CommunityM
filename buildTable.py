@@ -47,40 +47,30 @@ class BuildTable(object):
     for seqId in seqClassification:
       taxa = seqClassification[seqId]
 
-      taxonId, bootstrapSupport = parseTaxon(taxa[rankIndex])
+      taxaName, _ = parseTaxon(taxa[rankIndex])
 
-      if bIgnoreUnmapped and 'unmapped' in taxonId:
+      if bIgnoreUnmapped and 'unmapped' in taxaName:
         countUnmapped += 1
         continue
-
-      if bootstrapSupport >= bootstrapThreshold:
-        taxaDict = {}
-        taxaList = []
-        for r in xrange(0, rankIndex+1):
-          if '(' in taxa[r]:
-            taxaName = taxa[r][0:taxa[r].find('(')]
-          else:
-            taxaName = taxa[r].strip()
-
+      
+      taxaDict = {}
+      taxaList = []
+      for r in xrange(0, rankIndex+1):
+        taxaName, bootstrapSupport = parseTaxon(taxa[r])
+          
+        if bootstrapSupport < bootstrapThreshold:
+          taxaName = rankPrefixes[r]
+        else:
           taxaName = taxaName.replace('unclassified', '')
 
-          taxaDict[ranksByLevel[r]] = taxaName
-          taxaList.append(taxaName)
+        taxaDict[ranksByLevel[r]] = taxaName
+        taxaList.append(taxaName)
 
-        taxaDict['taxonomy'] = taxaList
+      taxaDict['taxonomy'] = taxaList
 
-        taxaStr = ';'.join(taxaList)
-        taxonomy[taxaStr] = taxaDict
-        counts[taxaStr] = counts.get(taxaStr, 0) + 1
-      else:
-        counts['unclassified'] = counts.get('unclassified', 0) + 1
-
-        unclassifiedDict = {}
-        unclassifiedList = []
-        for r in xrange(0, rankIndex+1):
-            unclassifiedList.append(rankPrefixes[r] + 'unclassified')
-        unclassifiedDict['taxonomy'] = unclassifiedList
-        taxonomy['unclassified'] = unclassifiedDict
+      taxaStr = ';'.join(taxaList)
+      taxonomy[taxaStr] = taxaDict
+      counts[taxaStr] = counts.get(taxaStr, 0) + 1
 
     if bIgnoreUnmapped:
       print '  [Note] Ignoring ' + str(countUnmapped) + ' unmapped reads.'

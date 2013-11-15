@@ -192,7 +192,7 @@ class IdentifyBinnedLSU(object):
         binId = f[0:f.rfind('.')]
         for line in open(binDir + '/' + f):
           if line[0] == '>':
-            seqId = line[1:].split(' ')[0].strip()
+            seqId = line[1:].split()[0].strip()
             seqIdToBinId[seqId] = binId
 
     if len(seqIdToBinId) == 0:
