@@ -98,8 +98,8 @@ class Extract16S(object):
       if not self.bQuiet:
         print 'Identifying 16S/18S sequences in paired-end reads: ' + pair1 + ', ' + pair2
 
-      outputPrefix1 = outputDir + 'extracted/' + sample + '.' + pair1[pair1.rfind('/')+1:pair1.rfind('.')]
-      outputPrefix2 = outputDir + 'extracted/' + sample + '.' + pair2[pair2.rfind('/')+1:pair2.rfind('.')]
+      outputPrefix1 = os.path.join(outputDir,'extracted',sample + '.' + pair1[pair1.rfind('/')+1:pair1.rfind('.')])
+      outputPrefix2 = os.path.join(outputDir,'extracted',sample + '.' + pair2[pair2.rfind('/')+1:pair2.rfind('.')])
 
       if not self.bQuiet:
         print '  Processing file: ' + pair1
@@ -313,13 +313,10 @@ class Extract16S(object):
         print '  Identified 16S/18 reads written to: ' + allSeqFile
         print ''
 
-  def run(self, configFile, threads, evalue, bQuiet):
-    rc = ReadConfig()
-    projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = False)
-
+  def run(self, projectParams, sampleParams, threads, evalue, bQuiet):
     print '\nProcessing %s sample(s).\n' % len(sampleParams)
 
-    os.makedirs(projectParams['output_dir'] + 'extracted')
+    os.makedirs(os.path.join(projectParams['output_dir'],'extracted'))
 
     self.bQuiet = bQuiet
 
@@ -345,5 +342,9 @@ if __name__ == '__main__':
 
   args = parser.parse_args()
 
+  # Read config file
+  rc = ReadConfig()
+  projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = False)
+
   extract16S = Extract16S()
-  extract16S.run(args.config_file, args.threads, args.evalue, args.quiet)
+  extract16S.run(projectParams, sampleParams, args.threads, args.evalue, args.quiet)

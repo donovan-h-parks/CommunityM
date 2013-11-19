@@ -66,7 +66,7 @@ class ClassifyBWA(object):
       bMapped = True
 
     return taxonomy, bMapped
-        
+
   def readPairedBAM(self, bamFile, ggIdToTaxonomy, maxEditDistance, minLength):
     # read compressed BAM file and report basic statistics
     bam = pysam.Samfile(bamFile, 'rb')
@@ -76,23 +76,23 @@ class ClassifyBWA(object):
     readsMappedTo16S_2 = {}
     editDists = {}
     counts = {'unmapped':0, 'edit dist':0, 'align len':0}
-    
+
     for read in bam.fetch(until_eof=True):
       if not read.is_secondary:
         taxonomy, bMapped = self.processRead(bam, read, ggIdToTaxonomy, maxEditDistance, minLength, counts)
-        
+
         if bMapped:
           editDist = read.opt('NM')
         else:
           editDist = -1 # flag as unmapped
-                  
+
         if read.is_read1:
           qname = read.qname + '/1'
           readsMappedTo16S = readsMappedTo16S_1
         elif read.is_read2:
           qname = read.qname + '/2'
           readsMappedTo16S = readsMappedTo16S_2
-        
+
         if qname in readsMappedTo16S and editDists[qname] != -1:
           # read has multiple primary alignments for different parts of the query sequence
           # which may indicate it is chimeric. For classification purposes, the LCA of
@@ -103,31 +103,31 @@ class ClassifyBWA(object):
         else:
           readsMappedTo16S[qname] = taxonomy
           editDists[qname] = editDist
-            
+
     # process secondary mappings for each query read
     for read in bam.fetch(until_eof=True):
       if read.is_secondary:
         # process primary read
         taxonomy, bMapped = self.processRead(bam, read, ggIdToTaxonomy, maxEditDistance, minLength)
         editDist = read.opt('NM')
-        
+
         if read.is_read1:
           qname = read.qname + '/1'
           readsMappedTo16S = readsMappedTo16S_1
         elif read.is_read2:
           qname = read.qname + '/2'
           readsMappedTo16S = readsMappedTo16S_2
-                  
+
         if bMapped and editDist <= editDists[qname]:
           lca = LCA(readsMappedTo16S[qname].split(';'), taxonomy.split(';'))
           readsMappedTo16S[qname] = ';'.join(lca)
-       
+
     bam.close()
-    
+
     if len(readsMappedTo16S_1) != len(readsMappedTo16S_2):
       print '[Error] Paired files do not have the same number of reads.'
       sys.exit()
-    
+
     print '  Number of reads: ' + str(len(readsMappedTo16S))
     print '    Reads unmapped: ' + str(counts['unmapped'])
     print '    Reads failing edit distance threshold: ' + str(counts['edit dist'])
@@ -143,7 +143,7 @@ class ClassifyBWA(object):
     readsMappedTo16S = {}
     editDists = {}
     counts = {'unmapped':0, 'edit dist':0, 'align len':0}
-    
+
     for read in bam.fetch(until_eof=True):
       if not read.is_secondary:
         taxonomy, bMapped = self.processRead(bam, read, ggIdToTaxonomy, maxEditDistance, minLength, counts)
@@ -152,7 +152,7 @@ class ClassifyBWA(object):
           editDist = read.opt('NM')
         else:
           editDist = -1 # flag as unmapped
-        
+
         if read.qname in readsMappedTo16S and editDists[read.qname] != -1:
           # read has multiple primary alignments for different parts of the query sequence
           # which may indicate it is chimeric. For classification purposes, the LCA of
@@ -163,18 +163,18 @@ class ClassifyBWA(object):
         else:
           readsMappedTo16S[read.qname] = taxonomy
           editDists[read.qname] = editDist
-          
+
     # process secondary mappings for each query read
     for read in bam.fetch(until_eof=True):
       if read.is_secondary:
         # process primary read
         taxonomy, bMapped = self.processRead(bam, read, ggIdToTaxonomy, maxEditDistance, minLength)
         editDist = read.opt('NM')
-        
+
         if bMapped and editDist <= editDists[read.qname]:
           lca = LCA(readsMappedTo16S[read.qname].split(';'), taxonomy.split(';'))
           readsMappedTo16S[read.qname] = ';'.join(lca)
-       
+
     bam.close()
 
     print '  Number of reads: ' + str(len(readsMappedTo16S))
@@ -194,7 +194,7 @@ class ClassifyBWA(object):
     for i in xrange(0, len(pairs), 2):
       pair1 = pairs[i]
       pair2 = pairs[i+1]
-      
+
       pair1Base = ntpath.basename(pair1)
       pair2Base = ntpath.basename(pair2)
 
@@ -206,16 +206,16 @@ class ClassifyBWA(object):
 
       output1 = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.16S.tsv'
       output2 = prefix + '.' + pair2Base[0:pair2Base.rfind('.')] + '.intersect.16S.tsv'
-      print '  Paired results written to: ' 
+      print '  Paired results written to: '
       print '    ' + output1
       print '    ' + output2 + '\n'
       self.writeClassification(output1, readsMappedTo16S_1)
       self.writeClassification(output2, readsMappedTo16S_2)
-      
+
       # write out classifications for paired-ends reads with only one end identified as 16S
       bamFile = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.16S.bam'
       readsMappedTo16S = self.readSingleBAM(bamFile, ggIdToTaxonomy, maxEditDistance, minLength)
-      
+
       output = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.16S.tsv'
       print '  Singleton results written to: ' + output + '\n'
       self.writeClassification(output, readsMappedTo16S)
@@ -234,19 +234,17 @@ class ClassifyBWA(object):
       print '  Classification results written to: ' + output + '\n'
       self.writeClassification(output, readsMappedTo16S)
 
-  def run(self, configFile, otu, threads):
-    rc = ReadConfig()
-    projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = True)
-    
+  def run(self, projectParams, sampleParams, otu, threads):
     # check if classification directory already exists
-    if not os.path.exists(projectParams['output_dir'] + 'classified'):
-      os.makedirs(projectParams['output_dir'] + 'classified')
+    dir_path = os.path.join(projectParams['output_dir'],'classified')
+    if not os.path.exists(dir_path):
+      os.makedirs(dir_path)
     else:
       rtn = raw_input('Remove previously classified reads (Y or N)? ')
       if rtn.lower() == 'y' or rtn.lower() == 'yes':
-        files = os.listdir(projectParams['output_dir'] + 'classified')
+        files = os.listdir(dir_path)
         for f in files:
-          os.remove(projectParams['output_dir'] + 'classified/' + f)
+          os.remove(os.path.join(dir_path, f))
       else:
         sys.exit()
 
@@ -254,7 +252,7 @@ class ClassifyBWA(object):
     ggIdToTaxonomy = readTaxonomy(taxonomyFile)
 
     ggDB = self.ggDB.replace('##', str(otu), 1)
-    
+
     print 'Classifying reads with: ' + ggDB
     print 'Assigning taxonomy with: ' + taxonomyFile
     print 'Threads: ' + str(threads)
@@ -269,8 +267,8 @@ class ClassifyBWA(object):
     for sample in sampleParams:
       print 'Mapping sample: ' + sample
       outputDir = projectParams['output_dir']
-      inputPrefix = outputDir + 'extracted/' + sample
-      outputPrefix = outputDir + 'classified/' + sample
+      inputPrefix = os.path.join(outputDir,'extracted',sample)
+      outputPrefix = os.path.join(outputDir,'classified',sample)
       pairs = sampleParams[sample]['pairs']
       singles = sampleParams[sample]['singles']
 
@@ -284,25 +282,25 @@ class ClassifyBWA(object):
         bamPrefix = ntpath.basename(pairs[i])
         bamPrefixFile = outputPrefix + '.' + bamPrefix[0:bamPrefix.rfind('.')] + '.intersect.16S'
         mapPair(ggDB, pair1File, pair2File, bamPrefixFile, threads)
-        
+
         diffFile = inputPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.SSU.fasta'
         bamPrefixFile = outputPrefix + '.' + bamPrefix[0:bamPrefix.rfind('.')] + '.difference.16S'
         mapSingle(ggDB, diffFile, bamPrefixFile, threads)
-        
+
       for i in xrange(0, len(singles)):
         singleBase = ntpath.basename(singles[i])
         singleFile = inputPrefix + '.' + singleBase[0:singleBase.rfind('.')] + '.SSU.fasta'
 
         bamPrefixFile = outputPrefix + '.' + singleBase[0:singleBase.rfind('.')] + '.16S'
         mapSingle(ggDB, singleFile, bamPrefixFile, threads)
-        
+
       print '************************************************************'
 
     # classify reads
     for sample in sampleParams:
       print 'Classifying sample: ' + sample
-      outputDir = projectParams['output_dir'] + 'classified/'
-      prefix = outputDir + sample
+      outputDir = os.path.join(projectParams['output_dir'],'classified')
+      prefix = os.path.join(outputDir,sample)
       pairs = sampleParams[sample]['pairs']
       singles = sampleParams[sample]['singles']
       maxEditDistance = sampleParams[sample]['edit_dist']
@@ -326,4 +324,8 @@ if __name__ == '__main__':
   args = parser.parse_args()
 
   classifyBWA = ClassifyBWA()
-  classifyBWA.run(args.config_file, args.otu, args.threads)
+
+  rc = ReadConfig()
+  projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = True)
+
+  classifyBWA.run(projectParams, sampleParams, args.otu, args.threads)
