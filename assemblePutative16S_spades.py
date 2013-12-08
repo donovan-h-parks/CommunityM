@@ -38,102 +38,102 @@ import shutil
 from readConfig import ReadConfig
 
 class AssemblePutative16S(object):
-  def __init__(self):
-    pass
+    def __init__(self):
+        pass
 
-  def parseScaffoldInfo(self, outputDir):
-    scaffoldLens = []
+    def parseScaffoldInfo(self, outputDir):
+        scaffoldLens = []
 
-    if not os.path.isfile(outputDir + '/scaffolds.fasta'):
-      return []
+        if not os.path.isfile(outputDir + '/scaffolds.fasta'):
+            return []
 
-    for line in open(outputDir + '/scaffolds.fasta'):
-      if line[0] == '>':
-        lineSplit = line.split('_')
-        seqLen = lineSplit[3]
+        for line in open(outputDir + '/scaffolds.fasta'):
+            if line[0] == '>':
+                lineSplit = line.split('_')
+                seqLen = lineSplit[3]
 
-        scaffoldLens.append(seqLen)
+                scaffoldLens.append(seqLen)
 
-    return scaffoldLens
+        return scaffoldLens
 
-  def run(self, configFile, threads):
-    rc = ReadConfig()
-    projectParams, _ = rc.readConfig(configFile, outputDirExists = True)
+    def run(self, configFile, threads):
+        rc = ReadConfig()
+        projectParams, _ = rc.readConfig(configFile, outputDirExists = True)
 
-    # create directory to store putative 16S genes
-    dirPutative16S = projectParams['output_dir'] + 'putativeSSU/'
-    if not os.path.exists(dirPutative16S):
-      print '[Error] Putative 16S gene reads expected in: ' + dirPutative16S
-      sys.exit()
+        # create directory to store putative 16S genes
+        dirPutative16S = projectParams['output_dir'] + 'putativeSSU/'
+        if not os.path.exists(dirPutative16S):
+            print '[Error] Putative 16S gene reads expected in: ' + dirPutative16S
+            sys.exit()
 
-    # extract GreenGene Ids of putative 16S genes
-    ggIds = set()
-    files = os.listdir(dirPutative16S)
-    for f in files:
-      if f.endswith('fasta'):
-        ggIds.add(int(f.split('.')[0]))
+        # extract GreenGene Ids of putative 16S genes
+        ggIds = set()
+        files = os.listdir(dirPutative16S)
+        for f in files:
+            if f.endswith('fasta'):
+                ggIds.add(int(f.split('.')[0]))
 
-    print 'Putative 16S genes to assemble: ' + str(len(ggIds))
+        print 'Putative 16S genes to assemble: ' + str(len(ggIds))
 
-    scaffoldInfo = {}
-    for ggId in ggIds:
-      print 'Assembling ' + str(ggId) + ': '
-      print ''
+        scaffoldInfo = {}
+        for ggId in ggIds:
+            print 'Assembling ' + str(ggId) + ': '
+            print ''
 
-      pair1 = dirPutative16S + str(ggId) + '.1.fasta'
-      pair2 = dirPutative16S + str(ggId) + '.2.fasta'
-      single = dirPutative16S + str(ggId) + '.singletons.fasta'
+            pair1 = dirPutative16S + str(ggId) + '.1.fasta'
+            pair2 = dirPutative16S + str(ggId) + '.2.fasta'
+            single = dirPutative16S + str(ggId) + '.singletons.fasta'
 
-      outputDir = dirPutative16S + str(ggId) + '_assembly_spades'
-      if os.path.exists(outputDir):
-        shutil.rmtree(outputDir)
+            outputDir = dirPutative16S + str(ggId) + '_assembly_spades'
+            if os.path.exists(outputDir):
+                shutil.rmtree(outputDir)
 
-      cmd = 'spades.py --only-assembler -o ' + outputDir + ' -t ' + str(threads)
-      if os.stat(single).st_size > 0: # check if file contains any sequences
-        cmd += ' -s ' + single
-      if os.stat(pair1).st_size > 0:
-        cmd += ' -1 ' + pair1 + ' -2 ' + pair2
+            cmd = 'spades.py --only-assembler -o ' + outputDir + ' -t ' + str(threads)
+            if os.stat(single).st_size > 0: # check if file contains any sequences
+                cmd += ' -s ' + single
+            if os.stat(pair1).st_size > 0:
+                cmd += ' -1 ' + pair1 + ' -2 ' + pair2
 
-      os.system(cmd)
+            os.system(cmd)
 
-      scaffoldInfo[ggId] = self.parseScaffoldInfo(outputDir)
+            scaffoldInfo[ggId] = self.parseScaffoldInfo(outputDir)
 
-    print '\n*********************************'
-    allScaffoldsFile = projectParams['output_dir'] + 'assembled_scaffolds.16S.fasta'
-    fout = open(allScaffoldsFile, 'w')
-    print 'Assembly results: '
-    for ggId in scaffoldInfo:
-      print '  Assembly of ' + str(ggId) + ' produce ' + str(len(scaffoldInfo[ggId])) + ' scaffold(s): ' + ' '.join(scaffoldInfo[ggId])
+        print '\n*********************************'
+        allScaffoldsFile = projectParams['output_dir'] + 'assembled_scaffolds.16S.fasta'
+        fout = open(allScaffoldsFile, 'w')
+        print 'Assembly results: '
+        for ggId in scaffoldInfo:
+            print '  Assembly of ' + str(ggId) + ' produce ' + str(len(scaffoldInfo[ggId])) + ' scaffold(s): ' + ' '.join(scaffoldInfo[ggId])
 
-      if not os.path.isfile(dirPutative16S + str(ggId) + '_assembly_spades/scaffolds.fasta'):
-        print '    Failed to build scaffolds for ' + str(ggId)
-        continue
+            if not os.path.isfile(dirPutative16S + str(ggId) + '_assembly_spades/scaffolds.fasta'):
+                print '    Failed to build scaffolds for ' + str(ggId)
+                continue
 
-      index = 0
-      for line in open(dirPutative16S + str(ggId) + '_assembly_spades/scaffolds.fasta'):
-        if line[0] == '>':
-          lineSplit = line.split('_')
-          seqLen = lineSplit[3]
+            index = 0
+            for line in open(dirPutative16S + str(ggId) + '_assembly_spades/scaffolds.fasta'):
+                if line[0] == '>':
+                    lineSplit = line.split('_')
+                    seqLen = lineSplit[3]
 
-          fout.write('>16S_' + str(ggId) + '-' + str(index) + ' ' + seqLen + '\n')
+                    fout.write('>16S_' + str(ggId) + '-' + str(index) + ' ' + seqLen + '\n')
 
-          index += 1
-        else:
-          fout.write(line)
-    fout.close()
+                    index += 1
+                else:
+                    fout.write(line)
+        fout.close()
 
-    print ''
-    print '  All assembled 16S contigs written to: ' + allScaffoldsFile
+        print ''
+        print '  All assembled 16S contigs written to: ' + allScaffoldsFile
 
 if __name__ == '__main__':
-  parser = argparse.ArgumentParser(description="Assemble putative 16S genes with the SPADES assembler.",
-                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(description="Assemble putative 16S genes with the SPADES assembler.",
+                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-  parser.add_argument('config_file', help='project config file')
+    parser.add_argument('config_file', help='project config file')
 
-  parser.add_argument('-t', '--threads', help='number of threads', type=int, default = 1)
+    parser.add_argument('-t', '--threads', help='number of threads', type=int, default = 1)
 
-  args = parser.parse_args()
+    args = parser.parse_args()
 
-  assemblePutative16S = AssemblePutative16S()
-  assemblePutative16S.run(args.config_file, args.threads)
+    assemblePutative16S = AssemblePutative16S()
+    assemblePutative16S.run(args.config_file, args.threads)

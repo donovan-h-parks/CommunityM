@@ -40,399 +40,399 @@ from readConfig import ReadConfig
 from seqUtils import extractSeqs
 
 class ReferenceSeqHit(object):
-  def __init__(self, refId):
-    self.refId = refId
-    self.numHits = 0
-    self.pairs = {}
-    self.singles = {}
+    def __init__(self, refId):
+        self.refId = refId
+        self.numHits = 0
+        self.pairs = {}
+        self.singles = {}
 
-  def addPairHit(self, filename1, filename2, queryId1, queryId2):
-    self.numHits += 2
+    def addPairHit(self, filename1, filename2, queryId1, queryId2):
+        self.numHits += 2
 
-    if filename1 not in self.pairs:
-      self.pairs[filename1] = set()
+        if filename1 not in self.pairs:
+            self.pairs[filename1] = set()
 
-    if filename2 not in self.pairs:
-      self.pairs[filename2] = set()
+        if filename2 not in self.pairs:
+            self.pairs[filename2] = set()
 
-    self.pairs[filename1].add(queryId1)
-    self.pairs[filename2].add(queryId2)
+        self.pairs[filename1].add(queryId1)
+        self.pairs[filename2].add(queryId2)
 
-  def addSingleHit(self, filename, queryId):
-    self.numHits += 1
+    def addSingleHit(self, filename, queryId):
+        self.numHits += 1
 
-    if filename not in self.singles:
-      self.singles[filename] = set()
-    self.singles[filename].add(queryId)
+        if filename not in self.singles:
+            self.singles[filename] = set()
+        self.singles[filename].add(queryId)
 
 class IdentifyRecoverable16S(object):
-  def __init__(self):
-    self.ggRefDist = '/srv/db/gg/2013_05/gg_13_5_otus/dist/dist_##_otus.tsv'
+    def __init__(self):
+        self.ggRefDist = '/srv/db/gg/2013_05/gg_13_5_otus/dist/dist_##_otus.tsv'
 
-    self.bQuiet = False
-    pass
+        self.bQuiet = False
+        pass
 
-  def ggIdFromTaxonomy(self, taxonomy):
-    if '(' in taxonomy[7]:
-      return taxonomy[7][4:taxonomy[7].rfind('(')]
-    else:
-      return taxonomy[7][4:].rstrip()
-
-  def readClassifications(self, classificationFile):
-    classifications = {}
-
-    for line in open(classificationFile):
-      lineSplit = line.split()
-      seqId = lineSplit[0]
-      taxa = [x.strip() for x in lineSplit[1].split(';') if x.strip() != '']
-
-      classifications[seqId] = taxa
-
-    return classifications
-
-  def identifyConsistentPairs(self, referenceSeqHits, pairFile1, pairFile2, classificationFile1, classificationFile2, neighbours, bPairsAsSingles, bSingleEnded):
-    if not self.bQuiet:
-      print '  Reading classification file.'
-
-    classifications1 = self.readClassifications(classificationFile1)
-    classifications2 = self.readClassifications(classificationFile2)
-
-    # get read ids
-    if not self.bQuiet:
-      print '  Identifying consistent pairs.'
-
-    # find pairs that agree on classification
-    numSingletons = 0
-    numPairsInAgreement = 0
-    numPairsInDisagreement = 0
-    numUnclassified = 0
-    for seqId1 in classifications1:
-      ggId1 = ggId2 = None
-
-      seqId2 = seqId1[0:-1] + '2'
-
-      ggId1 = self.ggIdFromTaxonomy(classifications1[seqId1])
-      if ggId1 == 'unclassified' or ggId1 == 'unmapped':
-        numUnclassified += 1
-  
-        ggId2 = self.ggIdFromTaxonomy(classifications2[seqId2])
-        if ggId2 == 'unclassified' or ggId2 == 'unmapped':
-          numUnclassified += 1
+    def ggIdFromTaxonomy(self, taxonomy):
+        if '(' in taxonomy[7]:
+            return taxonomy[7][4:taxonomy[7].rfind('(')]
         else:
-          numSingletons += 1
-          if bSingleEnded:
-            referenceSeqHits[ggId2] = referenceSeqHits.get(ggId2, ReferenceSeqHit(ggId2))
-            referenceSeqHits[ggId2].addSingleHit(pairFile2, seqId2)
-  
-        continue
+            return taxonomy[7][4:].rstrip()
 
-      ggId2 = self.ggIdFromTaxonomy(classifications2[seqId2])
-      if ggId2 == 'unclassified' or ggId2 == 'unmapped':
-        numUnclassified += 1
+    def readClassifications(self, classificationFile):
+        classifications = {}
 
-        ggId1 = self.ggIdFromTaxonomy(classifications1[seqId1])
-        numSingletons += 1
-        if bSingleEnded:
-          referenceSeqHits[ggId1] = referenceSeqHits.get(ggId1, ReferenceSeqHit(ggId1))
-          referenceSeqHits[ggId1].addSingleHit(pairFile1, seqId1)
+        for line in open(classificationFile):
+            lineSplit = line.split()
+            seqId = lineSplit[0]
+            taxa = [x.strip() for x in lineSplit[1].split(';') if x.strip() != '']
 
-        continue
+            classifications[seqId] = taxa
 
-      if ggId1 == ggId2 or ggId1 in neighbours[ggId2]:
-        referenceSeqHits[ggId1] = referenceSeqHits.get(ggId1, ReferenceSeqHit(ggId1))
-        referenceSeqHits[ggId1].addPairHit(pairFile1, pairFile2, seqId1, seqId2)
-        numPairsInAgreement += 1
-      else:
-        numPairsInDisagreement += 1
-        if bPairsAsSingles:
-          referenceSeqHits[ggId1] = referenceSeqHits.get(ggId1, ReferenceSeqHit(ggId1))
-          referenceSeqHits[ggId1].addSingleHit(pairFile1, seqId1)
-          referenceSeqHits[ggId2] = referenceSeqHits.get(ggId2, ReferenceSeqHit(ggId2))
-          referenceSeqHits[ggId2].addSingleHit(pairFile2, seqId2)
+        return classifications
 
-    if not self.bQuiet:
-      print '    Classified reads: ' + str(len(classifications1) + len(classifications2))
-      print '      Singletons: ' + str(numSingletons) + ' (%.2f' % (numSingletons*100.0/(len(classifications1) + len(classifications2))) + ')'
-      print '      Reads in pairs with similar classifications: ' + str(2*numPairsInAgreement) + ' (%.2f' % (2*numPairsInAgreement*100.0/(len(classifications1) + len(classifications2))) + ')'
-      print '      Reads in pairs with different classifications: ' + str(2*numPairsInDisagreement) + ' (%.2f' % (2*numPairsInDisagreement*100.0/(len(classifications1) + len(classifications2))) + ')'
-      print '      Unclassified/unmapped reads: ' + str(numUnclassified) + ' (%.2f' % (numUnclassified*100.0/(len(classifications1) + len(classifications2))) + ')'
-      print ''
+    def identifyConsistentPairs(self, referenceSeqHits, pairFile1, pairFile2, classificationFile1, classificationFile2, neighbours, bPairsAsSingles, bSingleEnded):
+        if not self.bQuiet:
+            print '  Reading classification file.'
 
-  def addSingletons(self, referenceSeqHits, single, classificationFile):
-    if not self.bQuiet:
-      print '  Reading classifications.'
+        classifications1 = self.readClassifications(classificationFile1)
+        classifications2 = self.readClassifications(classificationFile2)
 
-    classifications = self.readClassifications(classificationFile)
+        # get read ids
+        if not self.bQuiet:
+            print '  Identifying consistent pairs.'
 
-    if not self.bQuiet:
-      print '  Processing single-ended reads.'
+        # find pairs that agree on classification
+        numSingletons = 0
+        numPairsInAgreement = 0
+        numPairsInDisagreement = 0
+        numUnclassified = 0
+        for seqId1 in classifications1:
+            ggId1 = ggId2 = None
 
-    numUnclassified = 0
-    for seqId in classifications:
-      ggId = self.ggIdFromTaxonomy(classifications[seqId])
+            seqId2 = seqId1[0:-1] + '2'
 
-      if ggId == 'unclassified' or ggId == 'unmapped':
-        numUnclassified += 1
-      else:
-        referenceSeqHits[ggId] = referenceSeqHits.get(ggId, ReferenceSeqHit(ggId))
-        referenceSeqHits[ggId].addSingleHit(single, seqId)
+            ggId1 = self.ggIdFromTaxonomy(classifications1[seqId1])
+            if ggId1 == 'unclassified' or ggId1 == 'unmapped':
+                numUnclassified += 1
 
-    if not self.bQuiet:
-      print '    Classified single-ended reads: ' + str(len(classifications) - numUnclassified)
-      print '    Unclassified/unmapped single-ended reads: ' + str(numUnclassified)
-      print ''
+                ggId2 = self.ggIdFromTaxonomy(classifications2[seqId2])
+                if ggId2 == 'unclassified' or ggId2 == 'unmapped':
+                    numUnclassified += 1
+                else:
+                    numSingletons += 1
+                    if bSingleEnded:
+                        referenceSeqHits[ggId2] = referenceSeqHits.get(ggId2, ReferenceSeqHit(ggId2))
+                        referenceSeqHits[ggId2].addSingleHit(pairFile2, seqId2)
 
-  def sortHits(self, referenceSeqHits):
-    ggHits = {}
-    for ggId in referenceSeqHits:
-      ggHits[ggId] = referenceSeqHits[ggId].numHits
+                continue
 
-    sortedHits = sorted(ggHits.iteritems(), key=operator.itemgetter(1), reverse=True)
+            ggId2 = self.ggIdFromTaxonomy(classifications2[seqId2])
+            if ggId2 == 'unclassified' or ggId2 == 'unmapped':
+                numUnclassified += 1
 
-    return sortedHits
+                ggId1 = self.ggIdFromTaxonomy(classifications1[seqId1])
+                numSingletons += 1
+                if bSingleEnded:
+                    referenceSeqHits[ggId1] = referenceSeqHits.get(ggId1, ReferenceSeqHit(ggId1))
+                    referenceSeqHits[ggId1].addSingleHit(pairFile1, seqId1)
 
-  def getNeighbours(self, ggRefDistFile, seqIdentityThreshld):
-    # determine GG reference genes within sequence identity threshold
-    neighbours = {}
-    for line in open(ggRefDistFile):
-      lineSplit = line.split('\t')
-      refId = lineSplit[0].rstrip()
-      similarRefSeqs = [x.rstrip() for x in lineSplit[1:]]
+                continue
 
-      clusteredSeqs = set()
-      for item in similarRefSeqs:
-        itemSplit = item.split(':')
-        if float(itemSplit[1]) < seqIdentityThreshld:
-          clusteredSeqs.add(itemSplit[0])
-
-      neighbours[refId] = clusteredSeqs
-
-    return neighbours
-
-  def clusterHits(self, sortedHits, neighbours, minSeqCutoff):
-    # clusters reference sequences within sequence identity threshold
-    ggClusters = []
-    processedIds = set()
-    for i in xrange(0, len(sortedHits)):
-      ggIdI = sortedHits[i][0]
-      if ggIdI in processedIds:
-        continue
-
-      processedIds.add(ggIdI)
-
-      clusteredIds = [ggIdI]
-      totalHits = sortedHits[i][1]
-
-      if not self.bQuiet:
-        reportStr = '  Combining ' + str(ggIdI) + ' with ' + str(totalHits) + ' hits to: '
-
-      for j in xrange(i+1, len(sortedHits)):
-        ggIdJ = sortedHits[j][0]
-        if ggIdJ in processedIds:
-          continue
-
-        if ggIdJ in neighbours[ggIdI]:
-          clusteredIds.append(ggIdJ)
-          totalHits += sortedHits[j][1]
-          processedIds.add(ggIdJ)
-
-          if not self.bQuiet:
-            reportStr += str(ggIdJ) + ' (' + str(sortedHits[j][1]) + ' hits) '
-
-      if not self.bQuiet and totalHits > minSeqCutoff:
-        print reportStr
-
-      ggClusters.append([totalHits, clusteredIds])
-
-    return ggClusters
-
-  def extractClusteredReads(self, clusters, referenceSeqHits, minSeqCutoff):
-    readsInFiles = {}
-
-    for cluster in clusters:
-      hits = cluster[0]
-      ggIds = cluster[1]
-
-      if hits > minSeqCutoff:
-        for ggId in ggIds:
-          refSeqHit = referenceSeqHits[ggId]
-
-          for pairFile in refSeqHit.pairs:
-            readsInFiles[pairFile] = readsInFiles.get(pairFile, set()).union(refSeqHit.pairs[pairFile])
-
-          for singleFile in refSeqHit.singles:
-            readsInFiles[singleFile] = readsInFiles.get(singleFile, set()).union(refSeqHit.singles[singleFile])
-
-    seqsInFiles = {}
-    for filename in readsInFiles:
-      seqIds = set()
-      for readId in  readsInFiles[filename]:
-        seqIds.add(readId[0:readId.rfind('/')])
-      seqsInFiles[filename] = extractSeqs(filename, seqIds)
-      
-    return seqsInFiles
-
-  def extractRecoverable16S(self, referenceSeqHits, neighbours, minSeqCutoff, outputDir):
-    # sort hits to GreenGene reference sequences
-    if not self.bQuiet:
-      print 'Sorting reference sequences by number of hits.'
-
-    sortedHits = self.sortHits(referenceSeqHits)
-
-    if not self.bQuiet:
-      print '  Initial clusters: ' + str(len(sortedHits)) + '\n'
-
-    # greedily combine hits to similar GreenGene reference sequences
-    if not self.bQuiet:
-      print 'Clustering similar reference sequences.'
-
-    ggClusters = self.clusterHits(sortedHits, neighbours, minSeqCutoff)
-
-    if not self.bQuiet:
-      print '\n  Final clusters: ' + str(len(ggClusters)) + '\n'
-
-    # get sequences within clusters
-    if not self.bQuiet:
-      print 'Extracting clustered reads from file.\n'
-
-    seqsInFiles = self.extractClusteredReads(ggClusters, referenceSeqHits, minSeqCutoff)
-
-    # write out clusters containing a sufficient number of hits
-    if not self.bQuiet:
-      print 'Writing out reads belonging to putative 16S genes: '
-
-    numRecoverable16S = 0
-    for cluster in ggClusters:
-      hits = cluster[0]
-      ggIds = cluster[1]
-
-      if hits > minSeqCutoff:
-        numRecoverable16S += 1
+            if ggId1 == ggId2 or ggId1 in neighbours[ggId2]:
+                referenceSeqHits[ggId1] = referenceSeqHits.get(ggId1, ReferenceSeqHit(ggId1))
+                referenceSeqHits[ggId1].addPairHit(pairFile1, pairFile2, seqId1, seqId2)
+                numPairsInAgreement += 1
+            else:
+                numPairsInDisagreement += 1
+                if bPairsAsSingles:
+                    referenceSeqHits[ggId1] = referenceSeqHits.get(ggId1, ReferenceSeqHit(ggId1))
+                    referenceSeqHits[ggId1].addSingleHit(pairFile1, seqId1)
+                    referenceSeqHits[ggId2] = referenceSeqHits.get(ggId2, ReferenceSeqHit(ggId2))
+                    referenceSeqHits[ggId2].addSingleHit(pairFile2, seqId2)
 
         if not self.bQuiet:
-          print '  Cluster ' + str(numRecoverable16S) + ': ' + ggIds[0] + ' (' + str(hits) + ' reads)'
+            print '    Classified reads: ' + str(len(classifications1) + len(classifications2))
+            print '      Singletons: ' + str(numSingletons) + ' (%.2f' % (numSingletons*100.0/(len(classifications1) + len(classifications2))) + ')'
+            print '      Reads in pairs with similar classifications: ' + str(2*numPairsInAgreement) + ' (%.2f' % (2*numPairsInAgreement*100.0/(len(classifications1) + len(classifications2))) + ')'
+            print '      Reads in pairs with different classifications: ' + str(2*numPairsInDisagreement) + ' (%.2f' % (2*numPairsInDisagreement*100.0/(len(classifications1) + len(classifications2))) + ')'
+            print '      Unclassified/unmapped reads: ' + str(numUnclassified) + ' (%.2f' % (numUnclassified*100.0/(len(classifications1) + len(classifications2))) + ')'
+            print ''
 
-        # write out singletons
-        singletonsOut = open(outputDir + ggIds[0] + '.singletons.fasta', 'w')
-        pairOut1 = open(outputDir + ggIds[0] + '.1.fasta', 'w')
-        pairOut2 = open(outputDir + ggIds[0] + '.2.fasta', 'w')
-        
-        for ggId in ggIds:
-          refSeqHit = referenceSeqHits[ggId]
+    def addSingletons(self, referenceSeqHits, single, classificationFile):
+        if not self.bQuiet:
+            print '  Reading classifications.'
 
-          for singleFile in refSeqHit.singles:
-            for readId in refSeqHit.singles[singleFile]:
-              seqId = readId[0:readId.rfind('/')]
-              singletonsOut.write('>' + readId + '\n')
-              singletonsOut.write(seqsInFiles[singleFile][seqId][1] + '\n')
+        classifications = self.readClassifications(classificationFile)
 
-          for pairFile in sorted(list(refSeqHit.pairs)):
-            for readId in sorted(list(refSeqHit.pairs[pairFile])): # ensure reads are in the same order for both files
-              seqId = readId[0:readId.rfind('/')]
-              if '/1' in readId:
-                pairOut1.write('>' + readId + '\n')
-                pairOut1.write(seqsInFiles[pairFile][seqId][1] + '\n')
-              elif '/2' in readId:
-                pairOut2.write('>' + readId + '\n')
-                pairOut2.write(seqsInFiles[pairFile][seqId][1] + '\n')
-              else:
-                print "[Error] Unrecognized file format. Pairs must be denoted by '/1' and '/2'"
+        if not self.bQuiet:
+            print '  Processing single-ended reads.'
+
+        numUnclassified = 0
+        for seqId in classifications:
+            ggId = self.ggIdFromTaxonomy(classifications[seqId])
+
+            if ggId == 'unclassified' or ggId == 'unmapped':
+                numUnclassified += 1
+            else:
+                referenceSeqHits[ggId] = referenceSeqHits.get(ggId, ReferenceSeqHit(ggId))
+                referenceSeqHits[ggId].addSingleHit(single, seqId)
+
+        if not self.bQuiet:
+            print '    Classified single-ended reads: ' + str(len(classifications) - numUnclassified)
+            print '    Unclassified/unmapped single-ended reads: ' + str(numUnclassified)
+            print ''
+
+    def sortHits(self, referenceSeqHits):
+        ggHits = {}
+        for ggId in referenceSeqHits:
+            ggHits[ggId] = referenceSeqHits[ggId].numHits
+
+        sortedHits = sorted(ggHits.iteritems(), key=operator.itemgetter(1), reverse=True)
+
+        return sortedHits
+
+    def getNeighbours(self, ggRefDistFile, seqIdentityThreshld):
+        # determine GG reference genes within sequence identity threshold
+        neighbours = {}
+        for line in open(ggRefDistFile):
+            lineSplit = line.split('\t')
+            refId = lineSplit[0].rstrip()
+            similarRefSeqs = [x.rstrip() for x in lineSplit[1:]]
+
+            clusteredSeqs = set()
+            for item in similarRefSeqs:
+                itemSplit = item.split(':')
+                if float(itemSplit[1]) < seqIdentityThreshld:
+                    clusteredSeqs.add(itemSplit[0])
+
+            neighbours[refId] = clusteredSeqs
+
+        return neighbours
+
+    def clusterHits(self, sortedHits, neighbours, minSeqCutoff):
+        # clusters reference sequences within sequence identity threshold
+        ggClusters = []
+        processedIds = set()
+        for i in xrange(0, len(sortedHits)):
+            ggIdI = sortedHits[i][0]
+            if ggIdI in processedIds:
+                continue
+
+            processedIds.add(ggIdI)
+
+            clusteredIds = [ggIdI]
+            totalHits = sortedHits[i][1]
+
+            if not self.bQuiet:
+                reportStr = '  Combining ' + str(ggIdI) + ' with ' + str(totalHits) + ' hits to: '
+
+            for j in xrange(i+1, len(sortedHits)):
+                ggIdJ = sortedHits[j][0]
+                if ggIdJ in processedIds:
+                    continue
+
+                if ggIdJ in neighbours[ggIdI]:
+                    clusteredIds.append(ggIdJ)
+                    totalHits += sortedHits[j][1]
+                    processedIds.add(ggIdJ)
+
+                    if not self.bQuiet:
+                        reportStr += str(ggIdJ) + ' (' + str(sortedHits[j][1]) + ' hits) '
+
+            if not self.bQuiet and totalHits > minSeqCutoff:
+                print reportStr
+
+            ggClusters.append([totalHits, clusteredIds])
+
+        return ggClusters
+
+    def extractClusteredReads(self, clusters, referenceSeqHits, minSeqCutoff):
+        readsInFiles = {}
+
+        for cluster in clusters:
+            hits = cluster[0]
+            ggIds = cluster[1]
+
+            if hits > minSeqCutoff:
+                for ggId in ggIds:
+                    refSeqHit = referenceSeqHits[ggId]
+
+                    for pairFile in refSeqHit.pairs:
+                        readsInFiles[pairFile] = readsInFiles.get(pairFile, set()).union(refSeqHit.pairs[pairFile])
+
+                    for singleFile in refSeqHit.singles:
+                        readsInFiles[singleFile] = readsInFiles.get(singleFile, set()).union(refSeqHit.singles[singleFile])
+
+        seqsInFiles = {}
+        for filename in readsInFiles:
+            seqIds = set()
+            for readId in  readsInFiles[filename]:
+                seqIds.add(readId[0:readId.rfind('/')])
+            seqsInFiles[filename] = extractSeqs(filename, seqIds)
+
+        return seqsInFiles
+
+    def extractRecoverable16S(self, referenceSeqHits, neighbours, minSeqCutoff, outputDir):
+        # sort hits to GreenGene reference sequences
+        if not self.bQuiet:
+            print 'Sorting reference sequences by number of hits.'
+
+        sortedHits = self.sortHits(referenceSeqHits)
+
+        if not self.bQuiet:
+            print '  Initial clusters: ' + str(len(sortedHits)) + '\n'
+
+        # greedily combine hits to similar GreenGene reference sequences
+        if not self.bQuiet:
+            print 'Clustering similar reference sequences.'
+
+        ggClusters = self.clusterHits(sortedHits, neighbours, minSeqCutoff)
+
+        if not self.bQuiet:
+            print '\n  Final clusters: ' + str(len(ggClusters)) + '\n'
+
+        # get sequences within clusters
+        if not self.bQuiet:
+            print 'Extracting clustered reads from file.\n'
+
+        seqsInFiles = self.extractClusteredReads(ggClusters, referenceSeqHits, minSeqCutoff)
+
+        # write out clusters containing a sufficient number of hits
+        if not self.bQuiet:
+            print 'Writing out reads belonging to putative 16S genes: '
+
+        numRecoverable16S = 0
+        for cluster in ggClusters:
+            hits = cluster[0]
+            ggIds = cluster[1]
+
+            if hits > minSeqCutoff:
+                numRecoverable16S += 1
+
+                if not self.bQuiet:
+                    print '  Cluster ' + str(numRecoverable16S) + ': ' + ggIds[0] + ' (' + str(hits) + ' reads)'
+
+                # write out singletons
+                singletonsOut = open(outputDir + ggIds[0] + '.singletons.fasta', 'w')
+                pairOut1 = open(outputDir + ggIds[0] + '.1.fasta', 'w')
+                pairOut2 = open(outputDir + ggIds[0] + '.2.fasta', 'w')
+
+                for ggId in ggIds:
+                    refSeqHit = referenceSeqHits[ggId]
+
+                    for singleFile in refSeqHit.singles:
+                        for readId in refSeqHit.singles[singleFile]:
+                            seqId = readId[0:readId.rfind('/')]
+                            singletonsOut.write('>' + readId + '\n')
+                            singletonsOut.write(seqsInFiles[singleFile][seqId][1] + '\n')
+
+                    for pairFile in sorted(list(refSeqHit.pairs)):
+                        for readId in sorted(list(refSeqHit.pairs[pairFile])): # ensure reads are in the same order for both files
+                            seqId = readId[0:readId.rfind('/')]
+                            if '/1' in readId:
+                                pairOut1.write('>' + readId + '\n')
+                                pairOut1.write(seqsInFiles[pairFile][seqId][1] + '\n')
+                            elif '/2' in readId:
+                                pairOut2.write('>' + readId + '\n')
+                                pairOut2.write(seqsInFiles[pairFile][seqId][1] + '\n')
+                            else:
+                                print "[Error] Unrecognized file format. Pairs must be denoted by '/1' and '/2'"
+                                sys.exit()
+
+                singletonsOut.close()
+                pairOut1.close()
+                pairOut2.close()
+
+        if not self.bQuiet:
+            print ''
+            print '  Number of recoverable 16S genes identified: ' + str(numRecoverable16S)
+
+    def run(self, configFile, otu, seqIdentityThreshold, minSeqCutoff, bPairsAsSingles, bSingleEnded, bQuiet):
+        self.bQuiet = bQuiet
+
+        rc = ReadConfig()
+        projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = True)
+
+        ggRefDistFile = self.ggRefDist.replace('##', str(otu))
+        neighbours = self.getNeighbours(ggRefDistFile, seqIdentityThreshold)
+
+        # create directory to store putative 16S genes
+        dirPutative16S = projectParams['output_dir'] + 'putativeSSU/'
+        if not os.path.exists(dirPutative16S):
+            os.makedirs(dirPutative16S)
+        else:
+            rtn = raw_input('Remove previously recovered 16S reads (Y or N)? ')
+            if rtn.lower() == 'y' or rtn.lower() == 'yes':
+                files = os.listdir(dirPutative16S)
+                for f in files:
+                    if f.endswith('fasta'):
+                        os.remove(dirPutative16S + '/' + f)
+            else:
                 sys.exit()
 
-        singletonsOut.close()
-        pairOut1.close()
-        pairOut2.close()
+        referenceSeqHits = {}
+        for sample in sampleParams:
+            if not self.bQuiet:
+                print ''
+                print sample + ':'
 
-    if not self.bQuiet:
-      print ''
-      print '  Number of recoverable 16S genes identified: ' + str(numRecoverable16S)
+            extractedPrefix = projectParams['output_dir'] + 'extracted/' + sample
+            classifiedPrefix = projectParams['output_dir'] + 'classified/' + sample
+            pairs = sampleParams[sample]['pairs']
+            singles = sampleParams[sample]['singles']
 
-  def run(self, configFile, otu, seqIdentityThreshold, minSeqCutoff, bPairsAsSingles, bSingleEnded, bQuiet):
-    self.bQuiet = bQuiet
+            for i in xrange(0, len(pairs), 2):
+                pair1Base = ntpath.basename(pairs[i])
+                pair2Base = ntpath.basename(pairs[i+1])
 
-    rc = ReadConfig()
-    projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = True)
+                classificationFile1 = classifiedPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.16S.tsv'
+                classificationFile2 = classifiedPrefix + '.' + pair2Base[0:pair2Base.rfind('.')] + '.intersect.16S.tsv'
 
-    ggRefDistFile = self.ggRefDist.replace('##', str(otu))
-    neighbours = self.getNeighbours(ggRefDistFile, seqIdentityThreshold)
+                if not self.bQuiet:
+                    print '  Processing files: '
+                    print '    ' + classificationFile1
+                    print '    ' + classificationFile2
 
-    # create directory to store putative 16S genes
-    dirPutative16S = projectParams['output_dir'] + 'putativeSSU/'
-    if not os.path.exists(dirPutative16S):
-      os.makedirs(dirPutative16S)
-    else:
-      rtn = raw_input('Remove previously recovered 16S reads (Y or N)? ')
-      if rtn.lower() == 'y' or rtn.lower() == 'yes':
-        files = os.listdir(dirPutative16S)
-        for f in files:
-          if f.endswith('fasta'):
-            os.remove(dirPutative16S + '/' + f)
-      else:
-        sys.exit()
+                pairFile1 = extractedPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.SSU.fasta'
+                pairFile2 = extractedPrefix + '.' + pair2Base[0:pair2Base.rfind('.')] + '.intersect.SSU.fasta'
 
-    referenceSeqHits = {}
-    for sample in sampleParams:
-      if not self.bQuiet:
-        print ''
-        print sample + ':'
+                self.identifyConsistentPairs(referenceSeqHits, pairFile1, pairFile2, classificationFile1, classificationFile2, neighbours, bPairsAsSingles, bSingleEnded)
 
-      extractedPrefix = projectParams['output_dir'] + 'extracted/' + sample
-      classifiedPrefix = projectParams['output_dir'] + 'classified/' + sample
-      pairs = sampleParams[sample]['pairs']
-      singles = sampleParams[sample]['singles']
+                if bSingleEnded:
+                    classificationFile = classifiedPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.16S.tsv'
 
-      for i in xrange(0, len(pairs), 2):
-        pair1Base = ntpath.basename(pairs[i])
-        pair2Base = ntpath.basename(pairs[i+1])
-        
-        classificationFile1 = classifiedPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.16S.tsv'
-        classificationFile2 = classifiedPrefix + '.' + pair2Base[0:pair2Base.rfind('.')] + '.intersect.16S.tsv'
+                    if not self.bQuiet:
+                        print '  Processing file: ' + classificationFile
 
-        if not self.bQuiet:
-          print '  Processing files: '
-          print '    ' + classificationFile1
-          print '    ' + classificationFile2
+                    singleFile = extractedPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.SSU.fasta'
+                    self.addSingletons(referenceSeqHits, singleFile, classificationFile)
 
-        pairFile1 = extractedPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.SSU.fasta'
-        pairFile2 = extractedPrefix + '.' + pair2Base[0:pair2Base.rfind('.')] + '.intersect.SSU.fasta'
+            if bSingleEnded:
+                for single in singles:
+                    singleBase = ntpath.basename(single)
+                    classificationFile = classifiedPrefix + '.' + singleBase[0:singleBase.rfind('.')] + '.16S.tsv'
 
-        self.identifyConsistentPairs(referenceSeqHits, pairFile1, pairFile2, classificationFile1, classificationFile2, neighbours, bPairsAsSingles, bSingleEnded)
-        
-        if bSingleEnded:
-          classificationFile = classifiedPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.16S.tsv'
-          
-          if not self.bQuiet:
-            print '  Processing file: ' + classificationFile
-          
-          singleFile = extractedPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.SSU.fasta'
-          self.addSingletons(referenceSeqHits, singleFile, classificationFile)
-          
-      if bSingleEnded:
-        for single in singles:
-          singleBase = ntpath.basename(single)
-          classificationFile = classifiedPrefix + '.' + singleBase[0:singleBase.rfind('.')] + '.16S.tsv'
+                    if not self.bQuiet:
+                        print '  Processing file: ' + classificationFile
 
-          if not self.bQuiet:
-            print '  Processing file: ' + classificationFile
+                    singleFile = extractedPrefix + '.' + singleBase[0:singleBase.rfind('.')] + '.SSU.fasta'
+                    self.addSingletons(referenceSeqHits, singleFile, classificationFile)
 
-          singleFile = extractedPrefix + '.' + singleBase[0:singleBase.rfind('.')] + '.SSU.fasta'
-          self.addSingletons(referenceSeqHits, singleFile, classificationFile)
-
-    self.extractRecoverable16S(referenceSeqHits, neighbours, minSeqCutoff, dirPutative16S)
+        self.extractRecoverable16S(referenceSeqHits, neighbours, minSeqCutoff, dirPutative16S)
 
 if __name__ == '__main__':
-  parser = argparse.ArgumentParser(description="Create files containing 16S reads inferred to be from the same gene.")
-  parser.add_argument('config_file', help='project config file')
-  parser.add_argument('otu', help='GreenGenes reference database used to classify 16S reads (choices: 94, 97, 99)', type=int, choices=[94, 97, 99])
-  parser.add_argument('-i', '--seq_identity', help='sequence identity threshold for combining GreenGene hits (default = 0.03)', type=float, default=0.03)
-  parser.add_argument('-m', '--min_seqs', help='reads required to create a putative 16S gene file (default = 100).', type=int, default = 100)
-  parser.add_argument('-p', '--pairs_as_singles', help='treat paired reads with different classifications as singletons', action="store_true")
-  parser.add_argument('-s', '--singletons', help='use single-ended reads and pairs with only one mapped read', action="store_true")
-  parser.add_argument('-q', '--quiet', help='suppress output', action='store_true')
+    parser = argparse.ArgumentParser(description="Create files containing 16S reads inferred to be from the same gene.")
+    parser.add_argument('config_file', help='project config file')
+    parser.add_argument('otu', help='GreenGenes reference database used to classify 16S reads (choices: 94, 97, 99)', type=int, choices=[94, 97, 99])
+    parser.add_argument('-i', '--seq_identity', help='sequence identity threshold for combining GreenGene hits (default = 0.03)', type=float, default=0.03)
+    parser.add_argument('-m', '--min_seqs', help='reads required to create a putative 16S gene file (default = 100).', type=int, default = 100)
+    parser.add_argument('-p', '--pairs_as_singles', help='treat paired reads with different classifications as singletons', action="store_true")
+    parser.add_argument('-s', '--singletons', help='use single-ended reads and pairs with only one mapped read', action="store_true")
+    parser.add_argument('-q', '--quiet', help='suppress output', action='store_true')
 
-  parser.add_argument('--version', help='show version number of program', action='version', version='Identify recoverable 16S v0.0.1')
+    parser.add_argument('--version', help='show version number of program', action='version', version='Identify recoverable 16S v0.0.1')
 
-  args = parser.parse_args()
+    args = parser.parse_args()
 
-  identifyRecoverable16S = IdentifyRecoverable16S()
-  identifyRecoverable16S.run(args.config_file, args.otu, args.seq_identity, args.min_seqs, args.pairs_as_singles, args.singletons, args.quiet)
+    identifyRecoverable16S = IdentifyRecoverable16S()
+    identifyRecoverable16S.run(args.config_file, args.otu, args.seq_identity, args.min_seqs, args.pairs_as_singles, args.singletons, args.quiet)

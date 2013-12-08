@@ -34,122 +34,122 @@ import os, sys, argparse
 import ConfigParser
 
 class ReadConfig(object):
-  def __init__(self):
-    pass
+    def __init__(self):
+        pass
 
-  def readProjectParams(self, configParser):
-    projectParams = {}
+    def readProjectParams(self, configParser):
+        projectParams = {}
 
-    for option in configParser.options('project'):
-      projectParams[option] = configParser.get('project', option)
+        for option in configParser.options('project'):
+            projectParams[option] = configParser.get('project', option)
 
-    return projectParams
+        return projectParams
 
-  def readSample(self, configParser, section):
-    sampleParams = {}
+    def readSample(self, configParser, section):
+        sampleParams = {}
 
-    for option in configParser.options(section):
-      data = configParser.get(section, option)
-      if option == 'name':
-        sampleParams[option] = data
-      elif option == 'edit_dist':
-        sampleParams['edit_dist'] = float(data)
-      elif option == 'min_align_len':
-        sampleParams['min_align_len'] = float(data)
-      else:
-        if data != '':
-          sampleParams[option] = [x.strip() for x in data.split(',')]
-        else:
-          sampleParams[option] = []
+        for option in configParser.options(section):
+            data = configParser.get(section, option)
+            if option == 'name':
+                sampleParams[option] = data
+            elif option == 'edit_dist':
+                sampleParams['edit_dist'] = float(data)
+            elif option == 'min_align_len':
+                sampleParams['min_align_len'] = float(data)
+            else:
+                if data != '':
+                    sampleParams[option] = [x.strip() for x in data.split(',')]
+                else:
+                    sampleParams[option] = []
 
-    return sampleParams
+        return sampleParams
 
-  def validateMothurCompatibility(self, path):
-    if '-' in path:
-      print '[Error] For compatibility with mothur, paths and files must not contain hypens.'
-      print '[Error] The following path and/or file must be renamed: ' + path
-      sys.exit()
+    def validateMothurCompatibility(self, path):
+        if '-' in path:
+            print '[Error] For compatibility with mothur, paths and files must not contain hypens.'
+            print '[Error] The following path and/or file must be renamed: ' + path
+            sys.exit()
 
-  def validateConfig(self, configFile, projectParams, allSampleParams, bOutputDirShouldExist):
-    # fix output path so it is relative to executing script and ensure it exists
-    configPath = configFile[0:configFile.rfind('/')+1]
+    def validateConfig(self, configFile, projectParams, allSampleParams, bOutputDirShouldExist):
+        # fix output path so it is relative to executing script and ensure it exists
+        configPath = configFile[0:configFile.rfind('/')+1]
 
-    projectParams['output_dir'] = configPath + projectParams['output_dir'] + '/'
-    projectParams['output_dir'] = projectParams['output_dir'].replace('/./', '/') # make the paths pretty for output
-    projectParams['output_dir'] = projectParams['output_dir'].replace('//', '/')
-    self.validateMothurCompatibility(projectParams['output_dir'])
+        projectParams['output_dir'] = configPath + projectParams['output_dir'] + '/'
+        projectParams['output_dir'] = projectParams['output_dir'].replace('/./', '/') # make the paths pretty for output
+        projectParams['output_dir'] = projectParams['output_dir'].replace('//', '/')
+        self.validateMothurCompatibility(projectParams['output_dir'])
 
-    if not bOutputDirShouldExist and os.path.exists(projectParams['output_dir']):
-      print '[Error] Output directory already exists.'
-      sys.exit()
-    elif bOutputDirShouldExist and not os.path.exists(projectParams['output_dir']):
-      print '[Error] Output directory does not exists: ' + projectParams['output_dir']
-      sys.exit()
+        if not bOutputDirShouldExist and os.path.exists(projectParams['output_dir']):
+            print '[Error] Output directory already exists.'
+            sys.exit()
+        elif bOutputDirShouldExist and not os.path.exists(projectParams['output_dir']):
+            print '[Error] Output directory does not exists: ' + projectParams['output_dir']
+            sys.exit()
 
-    if not bOutputDirShouldExist: # time to create it!
-      os.makedirs(projectParams['output_dir'])
+        if not bOutputDirShouldExist: # time to create it!
+            os.makedirs(projectParams['output_dir'])
 
-    # fix paths so they are relative to the executing script and ensure all files exist
-    for sample in allSampleParams:
-      pairPaths = []
-      for path in allSampleParams[sample]['pairs']:
-        pathRelativeToScript = configPath + path
-        pathRelativeToScript = pathRelativeToScript.replace('/./', '/') # make the paths pretty for output
-        pathRelativeToScript = pathRelativeToScript.replace('//', '/')
+        # fix paths so they are relative to the executing script and ensure all files exist
+        for sample in allSampleParams:
+            pairPaths = []
+            for path in allSampleParams[sample]['pairs']:
+                pathRelativeToScript = configPath + path
+                pathRelativeToScript = pathRelativeToScript.replace('/./', '/') # make the paths pretty for output
+                pathRelativeToScript = pathRelativeToScript.replace('//', '/')
 
-        self.validateMothurCompatibility(pathRelativeToScript)
+                self.validateMothurCompatibility(pathRelativeToScript)
 
-        if not os.path.exists(pathRelativeToScript):
-          print '[Error] The following file does not exists: ' + pathRelativeToScript
-          sys.exit()
+                if not os.path.exists(pathRelativeToScript):
+                    print '[Error] The following file does not exists: ' + pathRelativeToScript
+                    sys.exit()
 
-        pairPaths.append(pathRelativeToScript)
+                pairPaths.append(pathRelativeToScript)
 
-      allSampleParams[sample]['pairs'] = pairPaths
+            allSampleParams[sample]['pairs'] = pairPaths
 
-      singlePaths = []
-      for path in allSampleParams[sample]['singles']:
-        pathRelativeToScript = configPath + path
-        pathRelativeToScript = pathRelativeToScript.replace('/./', '/') # make the paths pretty for output
-        pathRelativeToScript = pathRelativeToScript.replace('//', '/')
+            singlePaths = []
+            for path in allSampleParams[sample]['singles']:
+                pathRelativeToScript = configPath + path
+                pathRelativeToScript = pathRelativeToScript.replace('/./', '/') # make the paths pretty for output
+                pathRelativeToScript = pathRelativeToScript.replace('//', '/')
 
-        self.validateMothurCompatibility(pathRelativeToScript)
+                self.validateMothurCompatibility(pathRelativeToScript)
 
-        if not os.path.exists(pathRelativeToScript):
-          print '[Error] The following file does not exists: ' + pathRelativeToScript
-          sys.exit()
+                if not os.path.exists(pathRelativeToScript):
+                    print '[Error] The following file does not exists: ' + pathRelativeToScript
+                    sys.exit()
 
-        singlePaths.append(pathRelativeToScript)
+                singlePaths.append(pathRelativeToScript)
 
-      allSampleParams[sample]['singles'] = singlePaths
+            allSampleParams[sample]['singles'] = singlePaths
 
-  def readConfig(self, configFile, outputDirExists):
-    configParser = ConfigParser.ConfigParser()
-    configParser.readfp(open(configFile))
+    def readConfig(self, configFile, outputDirExists):
+        configParser = ConfigParser.ConfigParser()
+        configParser.readfp(open(configFile))
 
-    projectParams = self.readProjectParams(configParser)
+        projectParams = self.readProjectParams(configParser)
 
-    allSampleParams = {}
-    for section in configParser.sections():
-      if section[0:6] == 'sample':
-        sampleParams = self.readSample(configParser, section)
-        allSampleParams[section] = sampleParams
+        allSampleParams = {}
+        for section in configParser.sections():
+            if section[0:6] == 'sample':
+                sampleParams = self.readSample(configParser, section)
+                allSampleParams[section] = sampleParams
 
-    self.validateConfig(configFile, projectParams, allSampleParams, outputDirExists)
+        self.validateConfig(configFile, projectParams, allSampleParams, outputDirExists)
 
-    return projectParams, allSampleParams
+        return projectParams, allSampleParams
 
-  def run(self, configFile):
-    projectParams, sampleParams = self.readConfig(configFile)
-    print projectParams
-    print sampleParams
+    def run(self, configFile):
+        projectParams, sampleParams = self.readConfig(configFile)
+        print projectParams
+        print sampleParams
 
 if __name__ == '__main__':
-  parser = argparse.ArgumentParser(description="Read configuration file specifying details of all samples.",
-                                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(description="Read configuration file specifying details of all samples.",
+                                          formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-  parser.add_argument('config_file', help='Project configuration file.')
-  args = parser.parse_args()
+    parser.add_argument('config_file', help='Project configuration file.')
+    args = parser.parse_args()
 
-  readConfig = ReadConfig()
-  readConfig.run(args.config_file)
+    readConfig = ReadConfig()
+    readConfig.run(args.config_file)

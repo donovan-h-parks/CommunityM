@@ -33,36 +33,35 @@ __status__ = 'Development'
 import os
 
 def mapPair(db, file1, file2, bamPrefix, threads):
-  print 'Processing pair: ' + file1 + ', ' + file2
+    print 'Processing pair: ' + file1 + ', ' + file2
 
-  if not os.path.exists(db + '.bwt'):
+    if not os.path.exists(db + '.bwt'):
+        print ''
+        print 'Indexing database file: '
+        os.system('bwa index ' + db)
+
     print ''
-    print 'Indexing database file: '
-    os.system('bwa index ' + db)
+    print 'Aligning pairs with bwa-mem: '
+    os.system('bwa mem -a -t ' + str(threads) + ' ' + db + ' ' + file1 + ' ' + file2 + ' | samtools view -Subh - | samtools sort - ' + bamPrefix)
 
-  print ''
-  print 'Aligning pairs with bwa-mem: '
-  os.system('bwa mem -a -t ' + str(threads) + ' ' + db + ' ' + file1 + ' ' + file2 + ' | samtools view -Subh - | samtools sort - ' + bamPrefix)
-
-  print ''
-  print 'Indexing BAM file.'
-  os.system('samtools index ' + bamPrefix + '.bam')
-  print ''
+    print ''
+    print 'Indexing BAM file.'
+    os.system('samtools index ' + bamPrefix + '.bam')
+    print ''
 
 def mapSingle(db, filename, bamPrefix, threads):
-  print 'Processing single-ended read file: ' + filename
+    print 'Processing single-ended read file: ' + filename
 
-  if not os.path.exists(db + '.bwt'):
+    if not os.path.exists(db + '.bwt'):
+        print ''
+        print 'Indexing database file: '
+        os.system('bwa index ' + db)
+
     print ''
-    print 'Indexing database file: '
-    os.system('bwa index ' + db)
+    print 'Aligning with bwa-mem: '
+    os.system('bwa mem -a -t ' + str(threads) + ' ' + db + ' ' + filename + ' | samtools view -Subh - | samtools sort - ' + bamPrefix)
 
-  print ''
-  print 'Aligning with bwa-mem: '
-  os.system('bwa mem -a -t ' + str(threads) + ' ' + db + ' ' + filename + ' | samtools view -Subh - | samtools sort - ' + bamPrefix)
-
-  print ''
-  print 'Indexing BAM file.'
-  os.system('samtools index ' + bamPrefix + '.bam')
-  print ''
-
+    print ''
+    print 'Indexing BAM file.'
+    os.system('samtools index ' + bamPrefix + '.bam')
+    print ''

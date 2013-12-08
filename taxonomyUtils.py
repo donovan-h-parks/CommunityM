@@ -35,47 +35,47 @@ ranksByLevel = {0:'Domain', 1:'Phylum', 2:'Class', 3:'Order', 4:'Family', 5:'Gen
 rankPrefixes = {0:'k__', 1:'p__', 2:'c__', 3:'o__', 4:'f__', 5:'g__', 6:'s__', 7:'id__'}
 
 def readTaxonomy(taxonomyFile):
-  ggIdToTaxonomy = {}
-  for line in open(taxonomyFile):
-    lineSplit = line.split('\t')
-    ggIdToTaxonomy[lineSplit[0]] = lineSplit[1].rstrip()
+    ggIdToTaxonomy = {}
+    for line in open(taxonomyFile):
+        lineSplit = line.split('\t')
+        ggIdToTaxonomy[lineSplit[0]] = lineSplit[1].rstrip()
 
-  return ggIdToTaxonomy
+    return ggIdToTaxonomy
 
 def parseTaxon(taxon):
-  if '(' in taxon:
-    taxonSplit = taxon.split('(')
-    taxonId = taxonSplit[0]
-    taxonId = taxonId.strip()
-    bootstrapSupport = int(taxonSplit[1][0:taxonSplit[1].find(')')])
-  else:
-    taxonId = taxon.strip()
-    bootstrapSupport = 0
-    
-  return taxonId, bootstrapSupport
+    if '(' in taxon:
+        taxonSplit = taxon.split('(')
+        taxonId = taxonSplit[0]
+        taxonId = taxonId.strip()
+        bootstrapSupport = int(taxonSplit[1][0:taxonSplit[1].find(')')])
+    else:
+        taxonId = taxon.strip()
+        bootstrapSupport = 0
+
+    return taxonId, bootstrapSupport
 
 def LCA(taxonomy1, taxonomy2):
-  taxonomy = []
-  for i in xrange(0, len(ranksByLevel)-1):
-    t1, b1 = parseTaxon(taxonomy1[i])
-    t2, b2 = parseTaxon(taxonomy2[i])
-    
-    if t1 != t2:
-      if 'unmapped' in t1 or 'unmapped' in t2:
-        taxonomy.append(rankPrefixes[i] + 'unmapped')
-      else:
-        taxonomy.append(rankPrefixes[i] + 'unclassified')
-    else:
-      if b1 == 0 and b2 == 0:
+    taxonomy = []
+    for i in xrange(0, len(ranksByLevel)-1):
+        t1, b1 = parseTaxon(taxonomy1[i])
+        t2, b2 = parseTaxon(taxonomy2[i])
+
+        if t1 != t2:
+            if 'unmapped' in t1 or 'unmapped' in t2:
+                taxonomy.append(rankPrefixes[i] + 'unmapped')
+            else:
+                taxonomy.append(rankPrefixes[i] + 'unclassified')
+        else:
+            if b1 == 0 and b2 == 0:
+                taxonomy.append(t1)
+            else:
+                taxonomy.append(t1 + '(' + str(min(b1, b2)) + ')')
+
+    # return reference sequence id
+    t1, b1 = parseTaxon(taxonomy1[len(ranksByLevel)-1])
+    if b1 == 0:
         taxonomy.append(t1)
-      else:
+    else:
         taxonomy.append(t1 + '(' + str(min(b1, b2)) + ')')
-  
-  # return reference sequence id
-  t1, b1 = parseTaxon(taxonomy1[len(ranksByLevel)-1])
-  if b1 == 0:
-    taxonomy.append(t1)
-  else:
-    taxonomy.append(t1 + '(' + str(min(b1, b2)) + ')')
-  
-  return taxonomy
+
+    return taxonomy
