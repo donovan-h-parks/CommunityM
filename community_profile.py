@@ -48,7 +48,7 @@ if __name__ == '__main__':
     sample['pairs'] = splits
     sample['singles'] = []
     if len(sample['pairs']) != 2:
-      raise ValueError("Need 2 read files comma separated, found %i",len(splits))
+        raise ValueError("Need 2 read files comma separated, found %i",len(splits))
     sample_name = 'sample0'
     sample['name'] = sample_name
     sample['edit_dist'] = args.edit_distance
@@ -66,5 +66,3 @@ if __name__ == '__main__':
     print "Classifying reads..."
     classifier = classifyBWA_16S.ClassifyBWA()
     classifier.run(projectParams, sampleParams, '97', args.threads)#TODO: remove the hardcoded 97 here, and add ability to use Silva etc.
-
-
