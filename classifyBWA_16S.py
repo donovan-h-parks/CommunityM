@@ -234,19 +234,17 @@ class ClassifyBWA(object):
             print '  Classification results written to: ' + output + '\n'
             self.writeClassification(output, readsMappedTo16S)
 
-    def run(self, configFile, otu, threads):
-        rc = ReadConfig()
-        projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = True)
-
+    def run(self, projectParams, sampleParams, otu, threads):
         # check if classification directory already exists
-        if not os.path.exists(projectParams['output_dir'] + 'classified'):
-            os.makedirs(projectParams['output_dir'] + 'classified')
+        dir_path = os.path.join(projectParams['output_dir'],'classified')
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
         else:
             rtn = raw_input('Remove previously classified reads (Y or N)? ')
             if rtn.lower() == 'y' or rtn.lower() == 'yes':
-                files = os.listdir(projectParams['output_dir'] + 'classified')
+                files = os.listdir(dir_path)
                 for f in files:
-                    os.remove(projectParams['output_dir'] + 'classified/' + f)
+                    os.remove(os.path.join(dir_path, f))
             else:
                 sys.exit()
 
@@ -269,8 +267,10 @@ class ClassifyBWA(object):
         for sample in sampleParams:
             print 'Mapping sample: ' + sample
             outputDir = projectParams['output_dir']
-            inputPrefix = outputDir + 'extracted/' + sample
-            outputPrefix = outputDir + 'classified/' + sample
+
+            inputPrefix = os.path.join(outputDir,'extracted',sample)
+            outputPrefix = os.path.join(outputDir,'classified',sample)
+
             pairs = sampleParams[sample]['pairs']
             singles = sampleParams[sample]['singles']
 
@@ -301,8 +301,10 @@ class ClassifyBWA(object):
         # classify reads
         for sample in sampleParams:
             print 'Classifying sample: ' + sample
-            outputDir = projectParams['output_dir'] + 'classified/'
-            prefix = outputDir + sample
+
+            outputDir = os.path.join(projectParams['output_dir'],'classified')
+            prefix = os.path.join(outputDir,sample)
+
             pairs = sampleParams[sample]['pairs']
             singles = sampleParams[sample]['singles']
             maxEditDistance = sampleParams[sample]['edit_dist']
@@ -326,4 +328,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     classifyBWA = ClassifyBWA()
-    classifyBWA.run(args.config_file, args.otu, args.threads)
+
+    rc = ReadConfig()
+    projectParams, sampleParams = rc.readConfig(args.configFile, outputDirExists = True)
+
+    classifyBWA.run(projectParams, sampleParams, args.otu, args.threads)
