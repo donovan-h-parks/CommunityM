@@ -39,17 +39,10 @@ from seqUtils import extractSeqs
 class Extract16S(object):
     def __init__(self):
         self.bQuiet = False
-
-        self.bacteriaModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/0.0.6/models/SSU_bacteria.hmm'
-        self.bacteriaRevCompModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/0.0.6/models/SSU_bacteria.revComp.hmm'
-
-        self.archaeaModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/0.0.6/models/SSU_archaea.hmm'
-        self.archaeaRevCompModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/0.0.6/models/SSU_archaea.revComp.hmm'
-
-        self.eukModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/0.0.6/models/SSU_euk.hmm'
-        self.eukRevCompModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/0.0.6/models/SSU_euk.revComp.hmm'
-
-        pass
+        
+        self.bacteriaModelFile = '/srv/whitlam/bio/db/communitym/SSU_bacteria.hmm'
+        self.archaeaModelFile = '/srv/whitlam/bio/db/communitym/SSU_archaea.hmm'
+        self.eukModelFile = '/srv/whitlam/bio/db/communitym/SSU_euk.hmm'
 
     def getHits(self, hitTable):
         seqIds = set()
@@ -74,18 +67,15 @@ class Extract16S(object):
         if '.fq' in seqFile or '.fastq' in seqFile:
             pipe += 'fastq2fasta - | '
 
-        os.system(pipe + 'hmmsearch --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.bacteria.txt --tblout ' + outputPrefix + '.bacteria.table.txt -E ' + str(evalue) + ' ' + self.bacteriaModelFile + ' -')
-        os.system(pipe + 'hmmsearch --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.bacteria.rev_comp.txt --tblout ' + outputPrefix + '.bacteria.table.rev_comp.txt -E ' + str(evalue) + ' ' + self.bacteriaRevCompModelFile + ' -')
-
+        os.system(pipe + 'nhmmer --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.bacteria.txt --tblout ' + outputPrefix + '.bacteria.table.txt -E ' + str(evalue) + ' ' + self.bacteriaModelFile + ' -')
+    
         if not self.bQuiet:
             print '    Identifying archaeal 16S'
-        os.system(pipe + 'hmmsearch --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.archaea.txt --tblout ' + outputPrefix + '.archaea.table.txt -E ' + str(evalue) + ' ' + self.archaeaModelFile + ' -')
-        os.system(pipe + 'hmmsearch --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.archaea.rev_comp.txt --tblout ' + outputPrefix + '.archaea.table.rev_comp.txt -E ' + str(evalue) + ' ' + self.archaeaRevCompModelFile + ' -')
-
+        os.system(pipe + 'nhmmer --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.archaea.txt --tblout ' + outputPrefix + '.archaea.table.txt -E ' + str(evalue) + ' ' + self.archaeaModelFile + ' -')
+    
         if not self.bQuiet:
             print '    Identifying eukaryotic 18S'
-        os.system(pipe + 'hmmsearch --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.euk.txt --tblout ' + outputPrefix + '.euk.table.txt -E ' + str(evalue) + ' ' + self.eukModelFile + ' -')
-        os.system(pipe + 'hmmsearch --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.euk.rev_comp.txt --tblout ' + outputPrefix + '.euk.table.rev_comp.txt -E ' + str(evalue) + ' ' + self.eukRevCompModelFile + ' -')
+        os.system(pipe + 'nhmmer --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.euk.txt --tblout ' + outputPrefix + '.euk.table.txt -E ' + str(evalue) + ' ' + self.eukModelFile + ' -')
 
         if not self.bQuiet:
             print ''
@@ -111,51 +101,35 @@ class Extract16S(object):
 
             # reads hits
             hitsBacteria1 = self.getHits(outputPrefix1 + '.bacteria.table.txt')
-            hitsRevCompBacteria1 = self.getHits(outputPrefix1 + '.bacteria.table.rev_comp.txt')
-
             hitsArchaea1 = self.getHits(outputPrefix1 + '.archaea.table.txt')
-            hitsRevCompArcheae1 = self.getHits(outputPrefix1 + '.archaea.table.rev_comp.txt')
-
             hitsEuk1 = self.getHits(outputPrefix1 + '.euk.table.txt')
-            hitsRevCompEuk1 = self.getHits(outputPrefix1 + '.euk.table.rev_comp.txt')
-
+            
             hitsBacteria2 = self.getHits(outputPrefix2 + '.bacteria.table.txt')
-            hitsRevCompBacteria2 = self.getHits(outputPrefix2 + '.bacteria.table.rev_comp.txt')
-
             hitsArchaea2 = self.getHits(outputPrefix2 + '.archaea.table.txt')
-            hitsRevCompArcheae2 = self.getHits(outputPrefix2 + '.archaea.table.rev_comp.txt')
-
             hitsEuk2 = self.getHits(outputPrefix2 + '.euk.table.txt')
-            hitsRevCompEuk2 = self.getHits(outputPrefix2 + '.euk.table.rev_comp.txt')
 
             # combine hits
-            hits1 = hitsBacteria1.union(hitsRevCompBacteria1).union(hitsArchaea1).union(hitsRevCompArcheae1).union(hitsEuk1).union(hitsRevCompEuk1)
-            hits2 = hitsBacteria2.union(hitsRevCompBacteria2).union(hitsArchaea2).union(hitsRevCompArcheae2).union(hitsEuk2).union(hitsRevCompEuk2)
+            hits1 = hitsBacteria1.union(hitsArchaea1).union(hitsEuk1)
+            hits2 = hitsBacteria2.union(hitsArchaea2).union(hitsEuk2)
 
             if not self.bQuiet:
                 print '  Hits in ' + pair1 + ': ' + str(len(hits1))
-                print '    Fwd. bacterial hits: ' + str(len(hitsBacteria1))
-                print '    Rev. comp. bacterial hits: ' + str(len(hitsRevCompBacteria1))
-                print '    Fwd. archaeal hits: ' + str(len(hitsArchaea1))
-                print '    Rev. comp. archaeal hits: ' + str(len(hitsRevCompArcheae1))
-                print '    Fwd. eukaryotic hits: ' + str(len(hitsEuk1))
-                print '    Rev. comp. eukaryotic hits: ' + str(len(hitsRevCompEuk1))
+                print '    Bacterial hits: ' + str(len(hitsBacteria1))
+                print '    Archaeal hits: ' + str(len(hitsArchaea1))
+                print '    Eukaryotic hits: ' + str(len(hitsEuk1))
                 print ''
 
                 print '  Hits in ' + pair2 + ': ' + str(len(hits2))
-                print '    Fwd. bacterial hits: ' + str(len(hitsBacteria2))
-                print '    Rev. comp. bacterial hits: ' + str(len(hitsRevCompBacteria2))
-                print '    Fwd. archaeal hits: ' + str(len(hitsArchaea2))
-                print '    Rev. comp. archaeal hits: ' + str(len(hitsRevCompArcheae2))
-                print '    Fwd. eukaryotic hits: ' + str(len(hitsEuk2))
-                print '    Rev. comp. eukaryotic hits: ' + str(len(hitsRevCompEuk2))
+                print '    Bacterial hits: ' + str(len(hitsBacteria2))
+                print '    Archaeal hits: ' + str(len(hitsArchaea2))
+                print '    Eukaryotic hits: ' + str(len(hitsEuk2))
                 print ''
 
             # extract reads with hits
             if not self.bQuiet:
-                bacHits = hitsBacteria1.union(hitsRevCompBacteria1).union(hitsBacteria2).union(hitsRevCompBacteria2)
-                arHits = hitsArchaea1.union(hitsRevCompArcheae1).union(hitsArchaea2).union(hitsRevCompArcheae2)
-                eukHits = hitsEuk1.union(hitsRevCompEuk1).union(hitsEuk2).union(hitsRevCompEuk2)
+                bacHits = hitsBacteria1.union(hitsBacteria2)
+                arHits = hitsArchaea1.union(hitsArchaea2)
+                eukHits = hitsEuk1.union(hitsEuk2)
 
                 print '  Unique bacterial hits: ' + str(len(bacHits.difference(arHits.union(eukHits))))
                 print '  Unique archaeal hits: ' + str(len(arHits.difference(bacHits.union(eukHits))))
@@ -262,35 +236,23 @@ class Extract16S(object):
 
             # reads hits
             hitsBacteria = self.getHits(outputPrefix + '.bacteria.table.txt')
-            hitsRevCompBacteria = self.getHits(outputPrefix + '.bacteria.table.rev_comp.txt')
-
             hitsArchaea = self.getHits(outputPrefix + '.archaea.table.txt')
-            hitsRevCompArcheae = self.getHits(outputPrefix + '.archaea.table.rev_comp.txt')
-
             hitsEuk = self.getHits(outputPrefix + '.euk.table.txt')
-            hitsRevCompEuk = self.getHits(outputPrefix + '.euk.table.rev_comp.txt')
 
-            hits = hitsBacteria.union(hitsRevCompBacteria).union(hitsArchaea).union(hitsRevCompArcheae).union(hitsEuk).union(hitsRevCompEuk)
+            hits = hitsBacteria.union(hitsArchaea).union(hitsEuk)
 
             if not self.bQuiet:
                 print '  Hits in ' + seqFile
-                print '    Fwd. bacterial hits: ' + str(len(hitsBacteria))
-                print '    Rev. comp. bacterial hits: ' + str(len(hitsRevCompBacteria))
-                print '    Fwd. archaeal hits: ' + str(len(hitsArchaea))
-                print '    Rev. comp. archaeal hits: ' + str(len(hitsRevCompArcheae))
-                print '    Fwd. eukaryotic hits: ' + str(len(hitsEuk))
-                print '    Rev. comp. eukaryotic hits: ' + str(len(hitsRevCompEuk))
+                print '    Bacterial hits: ' + str(len(hitsBacteria))
+                print '    Archaeal hits: ' + str(len(hitsArchaea))
+                print '    Eukaryotic hits: ' + str(len(hitsEuk))
                 print ''
                 print '  Identified 16S/18S reads: ' + str(len(hits)) + ' reads'
                 print ''
 
-                bacHits = hitsBacteria.union(hitsRevCompBacteria)
-                arHits = hitsArchaea.union(hitsRevCompArcheae)
-                eukHits = hitsEuk.union(hitsRevCompEuk)
-
-                print '  Unique bacterial hits: ' + str(len(bacHits.difference(arHits.union(eukHits))))
-                print '  Unique archaeal hits: ' + str(len(arHits.difference(bacHits.union(eukHits))))
-                print '  Unique eukaryotic hits: ' + str(len(eukHits.difference(bacHits.union(arHits))))
+                print '  Unique bacterial hits: ' + str(len(hitsBacteria.difference(hitsArchaea.union(hitsEuk))))
+                print '  Unique archaeal hits: ' + str(len(hitsArchaea.difference(hitsBacteria.union(hitsEuk))))
+                print '  Unique eukaryotic hits: ' + str(len(hitsEuk.difference(hitsBacteria.union(hitsArchaea))))
                 print ''
                 print '  Extracting putative 16S/18S reads:'
 
@@ -344,7 +306,7 @@ if __name__ == '__main__':
 
     # Read config file
     rc = ReadConfig()
-    projectParams, sampleParams = rc.readConfig(args.configFile, outputDirExists = False)
+    projectParams, sampleParams = rc.readConfig(args.config_file, outputDirExists = False)
 
     extract16S = Extract16S()
     extract16S.run(projectParams, sampleParams, args.threads, args.evalue, args.quiet)

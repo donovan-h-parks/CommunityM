@@ -146,7 +146,7 @@ def extractSeqsFasta(fastaFile, seqIdsToExtract):
     for line in open(fastaFile):
         if line[0] == '>':
             if bKeep:
-                seqs[seqId] = [readId, seq]
+                seqs[seqId] = [readId, ''.join(seq)]
 
             readId = line[1:].split()[0].rstrip()
             seqId = readId
@@ -156,12 +156,12 @@ def extractSeqsFasta(fastaFile, seqIdsToExtract):
                 seqId = readId[0:readId.rfind('/')]
 
             bKeep = (seqId in seqIdsToExtract)
-            seq = ''
+            seq = []
         elif bKeep:
-            seq += line.rstrip()
+            seq.append(line[0:-1])
 
     if bKeep:
-        seqs[seqId] = [readId, seq]
+        seqs[seqId] = [readId, ''.join(seq)]
 
     return seqs
 
@@ -200,15 +200,15 @@ def extractReadsFasta(fastaFile, readIdsToExtract):
     for line in open(fastaFile):
         if line[0] == '>':
             if bKeep:
-                reads[readId] = read
+                reads[readId] = ''.join(read)
 
             readId = line[1:].split()[0].rstrip()
             bKeep = (readId in readIdsToExtract)
-            read = ''
+            read = []
         elif bKeep:
-            read += line.rstrip()
+            read.append(line[0:-1])
 
     if bKeep:
-        reads[readId] = read
+        reads[readId] = ''.join(read)
 
     return reads
