@@ -31,10 +31,42 @@ __email__ = 'donovan.parks@gmail.com'
 __status__ = 'Development'
 
 import os
+import sys
 import argparse
+import multiprocessing as mp
 
 from readConfig import ReadConfig
 from seqUtils import extractSeqs
+
+class HitRecord(object):
+    def __init__(self):
+        self.pair1 = None
+        self.pair2 = None
+        
+        self.hits1 = None
+        self.hitsBacteria1 = None
+        self.hitsArchaea1 = None
+        self.hitsEuk1 = None
+        
+        self.hits2 = None
+        self.hitsBacteria2 = None
+        self.hitsArchaea2 = None
+        self.hitsEuk2 = None
+        
+        self.uniqueBacterialHits = None
+        self.uniqueArchaealHits = None
+        self.uniqueEukHits = None
+        
+        self.hitUnion = None
+        self.hitIntersect = None
+        self.hitDiff = None
+        
+        self.allSeqFile = None
+        self.pair1FileUnion = None
+        self.pair2FileUnion = None
+        self.pair1FileIntersect = None
+        self.pair2FileIntersect = None
+        self.diffFile = None
 
 class Extract16S(object):
     def __init__(self):
@@ -44,7 +76,7 @@ class Extract16S(object):
         self.archaeaModelFile = '/srv/whitlam/bio/db/communitym/SSU_archaea.hmm'
         self.eukModelFile = '/srv/whitlam/bio/db/communitym/SSU_euk.hmm'
 
-    def getHits(self, hitTable):
+    def __getHits(self, hitTable):
         seqIds = set()
         for line in open(hitTable):
             if line[0] == '#' or line.strip() == '':
@@ -55,10 +87,7 @@ class Extract16S(object):
 
         return seqIds
 
-    def hmmSearch(self, seqFile, threads, evalue, outputPrefix):
-        if not self.bQuiet:
-            print '    Identifying bacterial 16S'
-
+    def __hmmSearch(self, seqFile, evalue, outputPrefix):
         if seqFile.endswith('gz'):
             pipe = 'zcat ' + seqFile + ' | '
         else:
@@ -67,75 +96,35 @@ class Extract16S(object):
         if '.fq' in seqFile or '.fastq' in seqFile:
             pipe += 'fastq2fasta - | '
 
-        os.system(pipe + 'nhmmer --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.bacteria.txt --tblout ' + outputPrefix + '.bacteria.table.txt -E ' + str(evalue) + ' ' + self.bacteriaModelFile + ' -')
-    
-        if not self.bQuiet:
-            print '    Identifying archaeal 16S'
-        os.system(pipe + 'nhmmer --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.archaea.txt --tblout ' + outputPrefix + '.archaea.table.txt -E ' + str(evalue) + ' ' + self.archaeaModelFile + ' -')
-    
-        if not self.bQuiet:
-            print '    Identifying eukaryotic 18S'
-        os.system(pipe + 'nhmmer --noali --cpu ' + str(threads) + ' -o ' + outputPrefix + '.euk.txt --tblout ' + outputPrefix + '.euk.table.txt -E ' + str(evalue) + ' ' + self.eukModelFile + ' -')
+        os.system(pipe + 'nhmmer --noali  -o ' + outputPrefix + '.bacteria.txt --tblout ' + outputPrefix + '.bacteria.table.txt -E ' + str(evalue) + ' ' + self.bacteriaModelFile + ' -')
+        os.system(pipe + 'nhmmer --noali  -o ' + outputPrefix + '.archaea.txt --tblout ' + outputPrefix + '.archaea.table.txt -E ' + str(evalue) + ' ' + self.archaeaModelFile + ' -')
+        os.system(pipe + 'nhmmer --noali  -o ' + outputPrefix + '.euk.txt --tblout ' + outputPrefix + '.euk.table.txt -E ' + str(evalue) + ' ' + self.eukModelFile + ' -')
 
-        if not self.bQuiet:
-            print ''
-
-    def processPairs(self, pairs, threads, evalue, outputDir, sample):
+    def __processPairs(self, pairs, evalue, outputDir, sample, queueOut):
         for i in xrange(0, len(pairs), 2):
             pair1 = pairs[i]
             pair2 = pairs[i+1]
 
-            if not self.bQuiet:
-                print 'Identifying 16S/18S sequences in paired-end reads: ' + pair1 + ', ' + pair2
-
             outputPrefix1 = os.path.join(outputDir,'extracted',sample + '.' + pair1[pair1.rfind('/')+1:pair1.rfind('.')])
             outputPrefix2 = os.path.join(outputDir,'extracted',sample + '.' + pair2[pair2.rfind('/')+1:pair2.rfind('.')])
 
-            if not self.bQuiet:
-                print '  Processing file: ' + pair1
-            self.hmmSearch(pair1, threads, evalue, outputPrefix1)
-
-            if not self.bQuiet:
-                print '  Processing file: ' + pair2
-            self.hmmSearch(pair2, threads, evalue, outputPrefix2)
+            self.__hmmSearch(pair1, evalue, outputPrefix1)
+            self.__hmmSearch(pair2, evalue, outputPrefix2)
 
             # reads hits
-            hitsBacteria1 = self.getHits(outputPrefix1 + '.bacteria.table.txt')
-            hitsArchaea1 = self.getHits(outputPrefix1 + '.archaea.table.txt')
-            hitsEuk1 = self.getHits(outputPrefix1 + '.euk.table.txt')
+            hitsBacteria1 = self.__getHits(outputPrefix1 + '.bacteria.table.txt')
+            hitsArchaea1 = self.__getHits(outputPrefix1 + '.archaea.table.txt')
+            hitsEuk1 = self.__getHits(outputPrefix1 + '.euk.table.txt')
             
-            hitsBacteria2 = self.getHits(outputPrefix2 + '.bacteria.table.txt')
-            hitsArchaea2 = self.getHits(outputPrefix2 + '.archaea.table.txt')
-            hitsEuk2 = self.getHits(outputPrefix2 + '.euk.table.txt')
+            hitsBacteria2 = self.__getHits(outputPrefix2 + '.bacteria.table.txt')
+            hitsArchaea2 = self.__getHits(outputPrefix2 + '.archaea.table.txt')
+            hitsEuk2 = self.__getHits(outputPrefix2 + '.euk.table.txt')
 
             # combine hits
             hits1 = hitsBacteria1.union(hitsArchaea1).union(hitsEuk1)
             hits2 = hitsBacteria2.union(hitsArchaea2).union(hitsEuk2)
 
-            if not self.bQuiet:
-                print '  Hits in ' + pair1 + ': ' + str(len(hits1))
-                print '    Bacterial hits: ' + str(len(hitsBacteria1))
-                print '    Archaeal hits: ' + str(len(hitsArchaea1))
-                print '    Eukaryotic hits: ' + str(len(hitsEuk1))
-                print ''
-
-                print '  Hits in ' + pair2 + ': ' + str(len(hits2))
-                print '    Bacterial hits: ' + str(len(hitsBacteria2))
-                print '    Archaeal hits: ' + str(len(hitsArchaea2))
-                print '    Eukaryotic hits: ' + str(len(hitsEuk2))
-                print ''
-
             # extract reads with hits
-            if not self.bQuiet:
-                bacHits = hitsBacteria1.union(hitsBacteria2)
-                arHits = hitsArchaea1.union(hitsArchaea2)
-                eukHits = hitsEuk1.union(hitsEuk2)
-
-                print '  Unique bacterial hits: ' + str(len(bacHits.difference(arHits.union(eukHits))))
-                print '  Unique archaeal hits: ' + str(len(arHits.difference(bacHits.union(eukHits))))
-                print '  Unique eukaryotic hits: ' + str(len(eukHits.difference(bacHits.union(arHits))))
-                print ''
-                print '  Extracting putative 16S/18S reads:'
             hitUnion = hits1.union(hits2)
 
             seqs1 = extractSeqs(pair1, hitUnion)
@@ -205,56 +194,56 @@ class Extract16S(object):
                 fout.write(seqs2[seqId][1] + '\n')
             fout.close()
 
-            if not self.bQuiet:
-                print '    Hits to left reads: ' + str(len(hits1))
-                print '    Hits to right reads: ' + str(len(hits2))
-                print '    Pairs with at least one read identified as 16S/18S: ' + str(len(hitUnion)) + ' pairs'
-                print '    Pairs with both read identified as 16S/18S: ' + str(len(hitIntersection)) + ' pairs'
-                print '    Pairs with only one read identified as 16S/18S: ' + str(len(hitDiff1) + len(hitDiff2)) + ' reads'
-                print ''
-                print '    All identified 16S reads: ' + allSeqFile
-                print '    Pairs with at least one read identified as 16S/18S written to: '
-                print '      ' + pair1FileUnion
-                print '      ' + pair2FileUnion
-                print '    Pairs with both read identified as 16S/18S written to: '
-                print '      ' + pair1FileIntersect
-                print '      ' + pair2FileIntersect
-                print '    Pairs with only one read identified as 16S/18S written to: '
-                print '      ' + diffFile
-                print ''
+            # gather output data
+            bacHits = hitsBacteria1.union(hitsBacteria2)
+            arHits = hitsArchaea1.union(hitsArchaea2)
+            eukHits = hitsEuk1.union(hitsEuk2)
+            
+            hitRecord = HitRecord()
+            hitRecord.pair1 = pair1
+            hitRecord.pair2 = pair2
+            
+            hitRecord.hits1 = len(hits1)
+            hitRecord.hitsBacteria1 = len(hitsBacteria1)
+            hitRecord.hitsArchaea1 = len(hitsArchaea1)
+            hitRecord.hitsEuk1 = len(hitsEuk1)
+            
+            hitRecord.hits2 = len(hits2)
+            hitRecord.hitsBacteria2 = len(hitsBacteria2)
+            hitRecord.hitsArchaea2 = len(hitsArchaea2)
+            hitRecord.hitsEuk2 = len(hitsEuk2)
+            
+            hitRecord.uniqueBacterialHits = len(bacHits.difference(arHits.union(eukHits)))
+            hitRecord.uniqueArchaealHits = len(arHits.difference(bacHits.union(eukHits)))
+            hitRecord.uniqueEukHits = len(eukHits.difference(bacHits.union(arHits)))
+            
+            hitRecord.hitUnion = len(hitUnion)
+            hitRecord.hitIntersect = len(hitIntersection)
+            hitRecord.hitDiff = len(hitDiff1) + len(hitDiff2)
+            
+            hitRecord.allSeqFile = allSeqFile
+            hitRecord.pair1FileUnion = pair1FileUnion
+            hitRecord.pair2FileUnion = pair2FileUnion
+            hitRecord.pair1FileIntersect = pair1FileIntersect
+            hitRecord.pair2FileIntersect = pair2FileIntersect
+            hitRecord.diffFile = diffFile
+               
+            queueOut.put(hitRecord)
 
-    def processSingles(self, singles, threads, evalue, outputDir, sample):
+    def __processSingles(self, singles, evalue, outputDir, sample, queueOut):
         for i in xrange(0, len(singles)):
             seqFile = singles[i]
 
-            if not self.bQuiet:
-                print 'Identifying 16S/18S sequences in single-end reads: ' + seqFile
-
             outputPrefix = outputDir + 'extracted/' + sample + '.' + seqFile[seqFile.rfind('/')+1:seqFile.rfind('.')]
 
-            self.hmmSearch(seqFile, threads, evalue, outputPrefix)
+            self.__hmmSearch(seqFile, evalue, outputPrefix)
 
             # reads hits
-            hitsBacteria = self.getHits(outputPrefix + '.bacteria.table.txt')
-            hitsArchaea = self.getHits(outputPrefix + '.archaea.table.txt')
-            hitsEuk = self.getHits(outputPrefix + '.euk.table.txt')
+            hitsBacteria = self.__getHits(outputPrefix + '.bacteria.table.txt')
+            hitsArchaea = self.__getHits(outputPrefix + '.archaea.table.txt')
+            hitsEuk = self.__getHits(outputPrefix + '.euk.table.txt')
 
             hits = hitsBacteria.union(hitsArchaea).union(hitsEuk)
-
-            if not self.bQuiet:
-                print '  Hits in ' + seqFile
-                print '    Bacterial hits: ' + str(len(hitsBacteria))
-                print '    Archaeal hits: ' + str(len(hitsArchaea))
-                print '    Eukaryotic hits: ' + str(len(hitsEuk))
-                print ''
-                print '  Identified 16S/18S reads: ' + str(len(hits)) + ' reads'
-                print ''
-
-                print '  Unique bacterial hits: ' + str(len(hitsBacteria.difference(hitsArchaea.union(hitsEuk))))
-                print '  Unique archaeal hits: ' + str(len(hitsArchaea.difference(hitsBacteria.union(hitsEuk))))
-                print '  Unique eukaryotic hits: ' + str(len(hitsEuk.difference(hitsBacteria.union(hitsArchaea))))
-                print ''
-                print '  Extracting putative 16S/18S reads:'
 
             # extract reads with hits
             seqs = extractSeqs(seqFile, hits)
@@ -271,9 +260,94 @@ class Extract16S(object):
 
             fout.close()
 
+            # gather output data
+            hitRecord = HitRecord()
+            hitRecord.pair1 = seqFile
+            hitRecord.pair2 = None
+            
+            hitRecord.hits1 = len(hits)
+            hitRecord.hitsBacteria1 = len(hitsBacteria)
+            hitRecord.hitsArchaea1 = len(hitsArchaea)
+            hitRecord.hitsEuk1 = len(hitsEuk)
+            
+            hitRecord.hits2 = None
+ 
+            hitRecord.uniqueBacterialHits = len(hitsBacteria.difference(hitsArchaea.union(hitsEuk)))
+            hitRecord.uniqueArchaealHits = len(hitsArchaea.difference(hitsBacteria.union(hitsEuk)))
+            hitRecord.uniqueEukHits = len(hitsEuk.difference(hitsBacteria.union(hitsArchaea)))
+            
+            hitRecord.allSeqFile = allSeqFile
+     
+            queueOut.put(hitRecord)
+                
+    def __storeResults(self, numFiles, writerQueue):
+        """Write results from threads."""
+        
+        numFilesProcessed = 0
+        while True:
+            hitRecord = writerQueue.get(block=True, timeout=None)
+            if hitRecord == None:
+                break
+     
             if not self.bQuiet:
-                print '  Identified 16S/18 reads written to: ' + allSeqFile
+                numFilesProcessed += 1
                 print ''
+                print '----------------------------------------------------------------------'
+                print '  Finished processing %d of %d (%.2f%%) files.' % (numFilesProcessed, numFiles, float(numFilesProcessed)*100/numFiles)
+                print ''
+                print '  Hits in ' + hitRecord.pair1 + ': ' + str(hitRecord.hits1)
+                print '    Bacterial hits: ' + str(hitRecord.hitsBacteria1)
+                print '    Archaeal hits: ' + str(hitRecord.hitsArchaea1)
+                print '    Eukaryotic hits: ' + str(hitRecord.hitsEuk1)
+                print ''
+
+                if hitRecord.pair2:
+                    print '  Hits in ' + hitRecord.pair2 + ': ' + str(hitRecord.hits2)
+                    print '    Bacterial hits: ' + str(hitRecord.hitsBacteria2)
+                    print '    Archaeal hits: ' + str(hitRecord.hitsArchaea2)
+                    print '    Eukaryotic hits: ' + str(hitRecord.hitsEuk2)
+                    print ''
+
+                print '  Unique bacterial hits: ' + str(hitRecord.uniqueBacterialHits)
+                print '  Unique archaeal hits: ' + str(hitRecord.uniqueArchaealHits)
+                print '  Unique eukaryotic hits: ' + str(hitRecord.uniqueEukHits)
+                
+                if hitRecord.pair2:
+                    print ''
+                    print '  Extracting putative 16S/18S reads:'
+                    print '    Hits to left reads: ' + str(hitRecord.hits1)
+                    print '    Hits to right reads: ' + str(hitRecord.hits2)
+                    print '    Pairs with at least one read identified as 16S/18S: ' + str(hitRecord.hitUnion) + ' pairs'
+                    print '    Pairs with both read identified as 16S/18S: ' + str(hitRecord.hitIntersect) + ' pairs'
+                    print '    Pairs with only one read identified as 16S/18S: ' + str(hitRecord.hitDiff) + ' reads'
+                    print ''
+                    print '    All identified 16S reads: ' + hitRecord.allSeqFile
+                    print '    Pairs with at least one read identified as 16S/18S written to: '
+                    print '      ' + hitRecord.pair1FileUnion
+                    print '      ' + hitRecord.pair2FileUnion
+                    print '    Pairs with both read identified as 16S/18S written to: '
+                    print '      ' + hitRecord.pair1FileIntersect
+                    print '      ' + hitRecord.pair2FileIntersect
+                    print '    Pairs with only one read identified as 16S/18S written to: '
+                    print '      ' + hitRecord.diffFile
+                    print ''
+                else:
+                    print '  Extracting putative 16S/18S reads:'
+                    print '  Identified 16S/18 reads written to: ' + hitRecord.allSeqFile
+  
+    def __runSample(self, evalue, outDir, queueIn, queueOut):
+        """Run each sample in a separate thread."""
+        
+        while True:
+            sample, pairs, singles = queueIn.get(block=True, timeout=None) 
+            if sample == None:
+                break 
+            
+            # identify 16S sequences in single-end reads
+            self.__processSingles(singles, evalue, outDir, sample, queueOut)
+            
+            # identify 16S sequences in paired-end reads
+            self.__processPairs(pairs, evalue, outDir, sample, queueOut)
 
     def run(self, projectParams, sampleParams, threads, evalue, bQuiet):
         print '\nProcessing %s sample(s).\n' % len(sampleParams)
@@ -281,16 +355,35 @@ class Extract16S(object):
         os.makedirs(os.path.join(projectParams['output_dir'],'extracted'))
 
         self.bQuiet = bQuiet
-
+        
+        workerQueue = mp.Queue()
+        writerQueue = mp.Queue()
+        
+        numFiles = 0
         for sample in sampleParams:
             pairs = sampleParams[sample]['pairs']
             singles = sampleParams[sample]['singles']
+            
+            numFiles += len(pairs) + len(singles)
+            
+            workerQueue.put((sample, pairs, singles))
+            
+        for _ in range(threads):
+            workerQueue.put((None, None, None))
+            
+        calcProc = [mp.Process(target = self.__runSample, args = (evalue, projectParams['output_dir'], workerQueue, writerQueue)) for _ in range(threads)]
+        writeProc = mp.Process(target = self.__storeResults, args = (numFiles, writerQueue))
 
-            # identify 16S sequences in paired-end reads
-            self.processPairs(pairs, threads, evalue, projectParams['output_dir'], sample)
+        writeProc.start()
 
-            # identify 16S sequences in single-end reads
-            self.processSingles(singles, threads, evalue, projectParams['output_dir'], sample)
+        for p in calcProc:
+            p.start()
+
+        for p in calcProc:
+            p.join()
+
+        writerQueue.put(None)
+        writeProc.join()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Extract 16S/18S sequences from metagenomic data using HMMs.",

@@ -166,11 +166,11 @@ class BuildTable(object):
                     classificationFile = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.16S.tsv'
                     self.parseSingleClassificationFile(classificationFile, bIgnoreUnmapped, bootstrap, rankIndex, counts, taxonomy)
 
-            singles = sampleParams[sample]['singles']
-            for single in singles:
-                singleBase = ntpath.basename(single)
-                classificationFile = prefix + '.' + singleBase[0:singleBase.rfind('.')] + '.16S.tsv'
-                self.parseSingleClassificationFile(classificationFile, bIgnoreUnmapped, bootstrap, rankIndex, counts, taxonomy)
+                    singles = sampleParams[sample]['singles']
+                    for single in singles:
+                        singleBase = ntpath.basename(single)
+                        classificationFile = prefix + '.' + singleBase[0:singleBase.rfind('.')] + '.16S.tsv'
+                        self.parseSingleClassificationFile(classificationFile, bIgnoreUnmapped, bootstrap, rankIndex, counts, taxonomy)
 
             if not bAbsoluteValues:
                 sumCounts = 0
@@ -192,7 +192,7 @@ if __name__ == '__main__':
     parser.add_argument('output', help='output file')
     parser.add_argument('-u', '--ignore_unmapped', help='do not consider unmapped reads', action="store_true")
     parser.add_argument('-p', '--pairs_as_singles', help='treat paired reads as singletons', action="store_true")
-    parser.add_argument('-s', '--singletons', help='use singleton 16S/18S reads identified within paired reads', action="store_true")
+    parser.add_argument('-s', '--singletons', help='use singleton 16S/18S reads', action="store_true")
     parser.add_argument('-b', '--bootstrap', help='bootstrap threshold required to accept classification (default = 0)', type=int, default=0)
     parser.add_argument('-a', '--absolute', help='write absolute values instead of relative values', action='store_true')
     parser.add_argument('-r', '--rank', help='taxonomic rank of table (choices: Domain, Phylum, Class, Order, Family, Genus, Species, GG_ID), (default = GG_ID)',
