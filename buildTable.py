@@ -140,7 +140,7 @@ class BuildTable(object):
 
         t.getBiomFormatJsonString("CommunityM", direct_io=fout)
 
-    def run(self, configFile, bIgnoreUnmapped, bTreatPairsAsSingles, bUseSingletons, bootstrap, rank, bAbsoluteValues, output):
+    def run(self, configFile, bIgnoreUnmapped, bTreatPairsAsSingles, bUseSingletons, bootstrap, rank, bMode, output):
         rc = ReadConfig()
         projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = True)
 
@@ -172,13 +172,22 @@ class BuildTable(object):
                         classificationFile = prefix + '.' + singleBase[0:singleBase.rfind('.')] + '.16S.tsv'
                         self.parseSingleClassificationFile(classificationFile, bIgnoreUnmapped, bootstrap, rankIndex, counts, taxonomy)
 
-            if not bAbsoluteValues:
+            if bMode == "rel":
+                # relative values
                 sumCounts = 0
                 for taxa, count in counts.iteritems():
                     sumCounts += count
 
                 for taxa in counts:
                     counts[taxa] /= float(sumCounts)
+            elif bMode == "pre":
+                # presence absence
+                for taxa in counts:
+                    if counts[taxa] > 0:
+                        counts[taxa] = 1.
+                    else:
+                        counts[taxa] = 0.
+            # else bMode = "rel"
 
             sampleCounts[sampleParams[sample]['name']] = counts
 
@@ -194,11 +203,11 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--pairs_as_singles', help='treat paired reads as singletons', action="store_true")
     parser.add_argument('-s', '--singletons', help='use singleton 16S/18S reads', action="store_true")
     parser.add_argument('-b', '--bootstrap', help='bootstrap threshold required to accept classification (default = 0)', type=int, default=0)
-    parser.add_argument('-a', '--absolute', help='write absolute values instead of relative values', action='store_true')
+    parser.add_argument('-m', '--mode', help='write values as "rel"ative, "abs"olute or "pre"sence/absense (default = rel)', default="rel",)
     parser.add_argument('-r', '--rank', help='taxonomic rank of table (choices: Domain, Phylum, Class, Order, Family, Genus, Species, GG_ID), (default = GG_ID)',
                               choices=['Domain', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'GG_ID'], default='GG_ID')
 
     args = parser.parse_args()
 
     buildTable = BuildTable()
-    buildTable.run(args.config_file, args.ignore_unmapped, args.pairs_as_singles, args.singletons, args.bootstrap, args.rank, args.absolute, args.output)
+    buildTable.run(args.config_file, args.ignore_unmapped, args.pairs_as_singles, args.singletons, args.bootstrap, args.rank, args.mode, args.output)
