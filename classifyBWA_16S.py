@@ -330,6 +330,6 @@ if __name__ == '__main__':
     classifyBWA = ClassifyBWA()
 
     rc = ReadConfig()
-    projectParams, sampleParams = rc.readConfig(args.configFile, outputDirExists = True)
+    projectParams, sampleParams = rc.readConfig(args.config_file, outputDirExists = True)
 
     classifyBWA.run(projectParams, sampleParams, args.otu, args.threads)

@@ -141,7 +141,7 @@ class BuildTable(object):
 
         t.getBiomFormatJsonString("CommunityM", direct_io=fout)
 
-    def run(self, projectParams, sampleParams, bIgnoreUnmapped, bTreatPairsAsSingles, bUseSingletons, bootstrap, rank, bAbsoluteValues, output):
+    def run(self, projectParams, sampleParams, bIgnoreUnmapped, bTreatPairsAsSingles, bUseSingletons, bootstrap, rank, bMode, output):
         # read classification results for all sequence files in each sample
         sampleCounts = {}
         taxonomy = {}
@@ -164,19 +164,28 @@ class BuildTable(object):
                     classificationFile = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.16S.tsv'
                     self.parseSingleClassificationFile(classificationFile, bIgnoreUnmapped, bootstrap, rankIndex, counts, taxonomy)
 
-            singles = sampleParams[sample]['singles']
-            for single in singles:
-                singleBase = ntpath.basename(single)
-                classificationFile = prefix + '.' + singleBase[0:singleBase.rfind('.')] + '.16S.tsv'
-                self.parseSingleClassificationFile(classificationFile, bIgnoreUnmapped, bootstrap, rankIndex, counts, taxonomy)
+                    singles = sampleParams[sample]['singles']
+                    for single in singles:
+                        singleBase = ntpath.basename(single)
+                        classificationFile = prefix + '.' + singleBase[0:singleBase.rfind('.')] + '.16S.tsv'
+                        self.parseSingleClassificationFile(classificationFile, bIgnoreUnmapped, bootstrap, rankIndex, counts, taxonomy)
 
-            if not bAbsoluteValues:
+            if bMode == "rel":
+                # relative values
                 sumCounts = 0
                 for taxa, count in counts.iteritems():
                     sumCounts += count
 
                 for taxa in counts:
                     counts[taxa] /= float(sumCounts)
+            elif bMode == "pre":
+                # presence absence
+                for taxa in counts:
+                    if counts[taxa] > 0:
+                        counts[taxa] = 1.
+                    else:
+                        counts[taxa] = 0.
+            # else bMode = "rel"
 
             sampleCounts[sampleParams[sample]['name']] = counts
 
@@ -190,9 +199,9 @@ if __name__ == '__main__':
     parser.add_argument('output', help='output file')
     parser.add_argument('-u', '--ignore_unmapped', help='do not consider unmapped reads', action="store_true")
     parser.add_argument('-p', '--pairs_as_singles', help='treat paired reads as singletons', action="store_true")
-    parser.add_argument('-s', '--singletons', help='use singleton 16S/18S reads identified within paired reads', action="store_true")
+    parser.add_argument('-s', '--singletons', help='use singleton 16S/18S reads', action="store_true")
     parser.add_argument('-b', '--bootstrap', help='bootstrap threshold required to accept classification (default = 0)', type=int, default=0)
-    parser.add_argument('-a', '--absolute', help='write absolute values instead of relative values', action='store_true')
+    parser.add_argument('-m', '--mode', help='write values as "rel"ative, "abs"olute or "pre"sence/absense (default = rel)', default="rel",)
     parser.add_argument('-r', '--rank', help='taxonomic rank of table (choices: Domain, Phylum, Class, Order, Family, Genus, Species, GG_ID), (default = GG_ID)',
                               choices=['Domain', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'GG_ID'], default='GG_ID')
 
@@ -202,4 +211,4 @@ if __name__ == '__main__':
     projectParams, sampleParams = rc.readConfig(args.config_file, outputDirExists = True)
 
     buildTable = BuildTable()
-    buildTable.run(projectParams, sampleParams, args.ignore_unmapped, args.pairs_as_singles, args.singletons, args.bootstrap, args.rank, args.absolute, args.output)
+    buildTable.run(projectParams, sampleParams, args.ignore_unmapped, args.pairs_as_singles, args.singletons, args.bootstrap, args.rank, args.mode, args.output)

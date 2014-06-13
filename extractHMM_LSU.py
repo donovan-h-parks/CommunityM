@@ -38,18 +38,14 @@ from seqUtils import extractSeqs
 
 class ExtractLSU(object):
     def __init__(self):
-        self.bQuiet = False
+        self.bacteriaModelFile = '/srv/whitlam/bio/db/communitym/LSU_bacteria.hmm'
+        self.bacteriaRevCompModelFile = '/srv/whitlam/bio/db/communitym/LSU_bacteria.revComp.hmm'
 
-        self.bacteriaModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/dev/models/LSU_bacteria.hmm'
-        self.bacteriaRevCompModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/dev/models/LSU_bacteria.revComp.hmm'
+        self.archaeaModelFile = '/srv/whitlam/bio/db/communitym/LSU_archaea.hmm'
+        self.archaeaRevCompModelFile = '/srv/whitlam/bio/db/communitym/LSU_archaea.revComp.hmm'
 
-        self.archaeaModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/dev/models/LSU_archaea.hmm'
-        self.archaeaRevCompModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/dev/models/LSU_archaea.revComp.hmm'
-
-        self.eukModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/dev/models/LSU_euk.hmm'
-        self.eukRevCompModelFile = '/srv/whitlam/bio/apps/12.04/sw/communitym/dev/models/LSU_euk.revComp.hmm'
-
-        pass
+        self.eukModelFile = '/srv/whitlam/bio/db/communitym/LSU_euk.hmm'
+        self.eukRevCompModelFile = '/srv/whitlam/bio/db/communitym/LSU_euk.revComp.hmm'
 
     def getHits(self, hitTable):
         seqIds = set()

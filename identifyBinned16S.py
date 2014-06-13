@@ -39,23 +39,26 @@ class IdentifyBinned16S(object):
         pass
 
     def readFasta(self, fastaFile):
-        try:
-            fh = file(fastaFile)
-        except IOError:
-            print "File '" + fastaFile + "' does not exist."
-            sys.exit()
+        '''Read sequences from FASTA file.'''
+        if fastaFile.endswith('.gz'):
+            openFile = gzip.open
+        else:
+            openFile = open
 
         seqs = {}
-        for line in fh:
-            if line.startswith('>'):
-                seqId = line[1:].split()[0]
-                seqs[seqId] = ''
+        for line in openFile(fastaFile):
+            if line[0] == '>':
+                seqId = line[1:].partition(' ')[0].rstrip()
+                seqs[seqId] = []
             else:
-                seqs[seqId] += line.rstrip('\n').rstrip('*')
+                seqs[seqId].append(line[0:-1])
+
+        for seqId, seq in seqs.iteritems():
+            seqs[seqId] = ''.join(seq)
 
         return seqs
 
-    def readHits(self, resultsFile, domain, evalueThreshold, revComp = False):
+    def readHits(self, resultsFile, domain, evalueThreshold):
         seqInfo = {}
 
         bReadHit = False
@@ -73,13 +76,19 @@ class IdentifyBinned16S(object):
                 if hitCounter >= 3:
                     lineSplit = line.split()
 
-                    iEvalue = lineSplit[5]
-                    aliFrom = lineSplit[9]
-                    aliTo = lineSplit[10]
+                    iEvalue = lineSplit[3]
+                    aliFrom = int(lineSplit[7])
+                    aliTo = int(lineSplit[8])
+                    
+                    revComp = False
+                    if aliFrom > aliTo:
+                        revComp = True
+                        aliFrom, aliTo = aliTo, aliFrom
+                        
                     alignLen = int(aliTo) - int(aliFrom) + 1
 
                     if float(iEvalue) <= evalueThreshold:
-                        seqInfo[seqId] = seqInfo.get(seqId, []) + [[domain, iEvalue, aliFrom, aliTo, str(alignLen), str(revComp)]]
+                        seqInfo[seqId] = seqInfo.get(seqId, []) + [[domain, iEvalue, str(aliFrom), str(aliTo), str(alignLen), str(revComp)]]
 
         return seqInfo
 
@@ -96,11 +105,9 @@ class IdentifyBinned16S(object):
             # if hits overlap then retain only the longest
             startNew = int(info[2])
             endNew = int(info[3])
-            lengthNew = int(info[4])
 
             start = int(hits[seqId][2])
             end = int(hits[seqId][3])
-            length = int(hits[seqId][4])
 
             # check if hits should be concatenated
             if abs(start - endNew) < concatenateThreshold:
@@ -210,15 +217,7 @@ class IdentifyBinned16S(object):
         for domain in ['archaea', 'bacteria', 'euk']:
             hits = {}
 
-            # forward hits
             seqInfo = self.readHits(outputDir + '/identified16S' + '.' + domain + '.txt', domain, evalueThreshold)
-            if len(seqInfo) > 0:
-                for seqId, seqHits in seqInfo.iteritems():
-                    for hit in seqHits:
-                        self.addHit(hits, seqId, hit, concatenateThreshold)
-
-            # reverse complement hits
-            seqInfo = self.readHits(outputDir + '/identified16S' + '.' + domain + '.rev_comp.txt', domain, evalueThreshold, True)
             if len(seqInfo) > 0:
                 for seqId, seqHits in seqInfo.iteritems():
                     for hit in seqHits:
