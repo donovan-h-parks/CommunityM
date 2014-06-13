@@ -21,6 +21,9 @@ import sys
 import os
 import argparse
 
+# Add the current directory to the python path so local libraries can be used
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+
 import extractHMM_16S
 import classifyBWA_16S
 import buildTable
@@ -69,5 +72,5 @@ if __name__ == '__main__':
     classifier.run(projectParams, sampleParams, '97', args.threads)#TODO: remove the hardcoded 97 here, and add ability to use Silva etc.
 
     print "Extracting last common ancestors of pairs..."
-    lcaer = BuildTable()
+    lcaer = buildTable.BuildTable()
     lcaer.parsePairedClassificationFiles(classificationFile1, classificationFile2, bIgnoreUnmapped, bTreatPairsAsSingles, bootstrap, rankIndex, counts, taxonomy)
