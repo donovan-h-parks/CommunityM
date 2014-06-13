@@ -32,6 +32,7 @@ __status__ = 'Development'
 
 import argparse
 import ntpath
+import os
 
 from biom.table import table_factory, SparseOTUTable
 
@@ -140,16 +141,13 @@ class BuildTable(object):
 
         t.getBiomFormatJsonString("CommunityM", direct_io=fout)
 
-    def run(self, configFile, bIgnoreUnmapped, bTreatPairsAsSingles, bUseSingletons, bootstrap, rank, bAbsoluteValues, output):
-        rc = ReadConfig()
-        projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = True)
-
+    def run(self, projectParams, sampleParams, bIgnoreUnmapped, bTreatPairsAsSingles, bUseSingletons, bootstrap, rank, bAbsoluteValues, output):
         # read classification results for all sequence files in each sample
         sampleCounts = {}
         taxonomy = {}
         rankIndex = ranksByLabel[rank]
         for sample in sampleParams:
-            prefix = projectParams['output_dir'] + 'classified/' + sample
+            prefix = os.path.join(projectParams['output_dir'],'classified/',sample)
 
             counts = {}
 
@@ -200,5 +198,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    rc = ReadConfig()
+    projectParams, sampleParams = rc.readConfig(args.config_file, outputDirExists = True)
+
     buildTable = BuildTable()
-    buildTable.run(args.config_file, args.ignore_unmapped, args.pairs_as_singles, args.singletons, args.bootstrap, args.rank, args.absolute, args.output)
+    buildTable.run(projectParams, sampleParams, args.ignore_unmapped, args.pairs_as_singles, args.singletons, args.bootstrap, args.rank, args.absolute, args.output)
