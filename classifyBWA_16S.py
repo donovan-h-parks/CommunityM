@@ -45,15 +45,15 @@ class ClassifyBWA(object):
     def __init__(self):
         self.unmappedStr = 'k__unmapped;p__unmapped;c__unmapped;o__unmapped;f__unmapped;g__unmapped;s__unmapped;id__unmapped;'
 
-        self.dbFiles = {'GG94':'/srv/db/gg/2013_05/gg_13_5_otus/rep_set/94_otus.fasta',
-                          'GG97':'/srv/db/gg/2013_05/gg_13_5_otus/rep_se/97_otus.fasta',
-                          'GG99':'/srv/db/gg/2013_05/gg_13_5_otus/rep_set/99_otus.fasta',
-                          'SILVA98':'/srv/whitlam/bio/db/mothur/silva/SSURef_111_NR_trunc.fna' }
+        self.dbFiles = {'GG94':'/srv/whitlam/bio/db/communitym/gg/94_otus.fasta',
+                          'GG97':'/srv/whitlam/bio/db/communitym/gg/97_otus.fasta',
+                          'GG99':'/srv/whitlam/bio/db/communitym/gg/99_otus.fasta',
+                          'SILVA98':'/srv/whitlam/bio/db/communitym/silva/SSURef_111_NR_trunc.acgt.fna' }
 
-        self.taxonomyFiles = {'GG94':'/srv/db/gg/2013_05/gg_13_5_otus/taxonomy/94_otu_taxonomy.full.txt',
-                              'GG97':'/srv/db/gg/2013_05/gg_13_5_otus/taxonomy/97_otu_taxonomy.full.txt',
-                              'GG99':'/srv/db/gg/2013_05/gg_13_5_otus/taxonomy/99_otu_taxonomy.full.txt',
-                              'SILVA98':'/srv/whitlam/bio/db/mothur/silva/SSURef_111_NR_taxonomy.txt' }
+        self.taxonomyFiles = {'GG94':'/srv/whitlam/bio/db/communitym/gg/94_otu_taxonomy.full.txt',
+                              'GG97':'/srv/whitlam/bio/db/communitym/gg/97_otu_taxonomy.full.txt',
+                              'GG99':'/srv/whitlam/bio/db/communitym/gg/99_otu_taxonomy.full.txt',
+                              'SILVA98':'/srv/whitlam/bio/db/communitym/silva/SSURef_111_NR_taxonomy.txt' }
 
 
     def processRead(self, bam, read, ggIdToTaxonomy, maxEditDistance, minLength, counts = None):
@@ -137,7 +137,7 @@ class ClassifyBWA(object):
             print '[Error] Paired files do not have the same number of reads.'
             sys.exit()
 
-        print '  Number of reads: ' + str(len(readsMappedTo16S))
+        print '  Number of pairs: ' + str(len(readsMappedTo16S))
         print '    Reads unmapped: ' + str(counts['unmapped'])
         print '    Reads failing edit distance threshold: ' + str(counts['edit dist'])
         print '    Reads failing alignment length threshold: ' + str(counts['align len'])
