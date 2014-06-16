@@ -32,6 +32,7 @@ __status__ = 'Development'
 
 import argparse
 import ntpath
+import os
 
 from biom.table import Table
 
@@ -121,9 +122,7 @@ class BuildTable(object):
 
         self.parseClassification(seqClassification, bIgnoreUnmapped, bootstrapThreshold, rankIndex, counts, taxonomy)
 
-    def write(self, output, sampleCounts, taxonomy):
-        fout = open(output, 'w')
-
+    def constructBiom(self, sampleCounts, taxonomy):
         sampleIds = sorted(sampleCounts.keys())
         otuIds = sorted(map(str, xrange(0, len(taxonomy))))
 
@@ -135,23 +134,27 @@ class BuildTable(object):
             for colIndex, sampleId in enumerate(sampleIds):
                 if otuId in sampleCounts[sampleId]:
                     sparseData.append([rowIndex, colIndex, sampleCounts[sampleId][otuId]])
- 
+
         table = Table(sparseData, otuIds, sampleIds, otuMetadata, None, table_id='CommunityM')
-        
+        return table
+
+
+    def write(self, output, sampleCounts, taxonomy):
+        fout = open(output, 'w')
+
+        table = constructBiom(sampleCounts, taxonomy)
+
         table.to_json("CommunityM", direct_io=fout)
-        
+
         fout.close()
 
-    def run(self, configFile, bIgnoreUnmapped, bTreatPairsAsSingles, bUseSingletons, bootstrap, rank, bMode, output):
-        rc = ReadConfig()
-        projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = True)
-
+    def paramsToCountsAndTaxonomy(self, projectParams, sampleParams, bIgnoreUnmapped, bTreatPairsAsSingles, bUseSingletons, bootstrap, rank, bMode):
         # read classification results for all sequence files in each sample
         sampleCounts = {}
         taxonomy = {}
         rankIndex = ranksByLabel[rank]
         for sample in sampleParams:
-            prefix = projectParams['output_dir'] + 'classified/' + sample
+            prefix = os.path.join(projectParams['output_dir'],'classified/',sample)
 
             counts = {}
 
@@ -193,8 +196,18 @@ class BuildTable(object):
 
             sampleCounts[sampleParams[sample]['name']] = counts
 
+        return sampleCounts, taxonomy
+
+
+    def run(self, projectParams, sampleParams, bIgnoreUnmapped, bTreatPairsAsSingles, bUseSingletons, bootstrap, rank, bMode, output):
+
+        sampleCounts, taxonomy = self.paramsToCountsAndTaxonomy(projectParams, sampleParams, bIgnoreUnmapped, bTreatPairsAsSingles, bUseSingletons, bootstrap, rank, bMode)
+        biom = self.constructBiom(sampleCounts, taxonomy)
+
         # write out results in BIOM format
-        self.write(output, sampleCounts, taxonomy)
+        fout = open(output, 'w')
+        biom.to_json("CommunityM", direct_io=fout)
+        fout.close()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Build table in BIOM format summarizing classified 16S sequences.")
@@ -211,5 +224,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    rc = ReadConfig()
+    projectParams, sampleParams = rc.readConfig(args.config_file, outputDirExists = True)
+
     buildTable = BuildTable()
-    buildTable.run(args.config_file, args.ignore_unmapped, args.pairs_as_singles, args.singletons, args.bootstrap, args.rank, args.mode, args.output)
+    buildTable.run(projectParams, sampleParams, args.ignore_unmapped, args.pairs_as_singles, args.singletons, args.bootstrap, args.rank, args.mode, args.output)
