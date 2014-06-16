@@ -20,6 +20,8 @@
 import sys
 import os
 import argparse
+import tempfile
+import shutil
 
 # Add the current directory to the python path so local libraries can be used
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
@@ -31,8 +33,10 @@ import buildTable
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate a community profile based on 16S reads')
     parser.add_argument('-p','--paired-reads', help='metagenomic reads to use, comma separated',required=True)
-    parser.add_argument('-o','--output_biom', help='output BIOM file', required=True)
-    parser.add_argument('--output_dir', help='output directory', default='community_profile')
+    parser.add_argument('-o','--output_tsv', help='output BIOM file', required=True)
+    parser.add_argument('-r', '--ref_db', help='Reference DB to use for classification (choices: GG94, GG97, GG99, SILVA98)', choices=['GG94', 'GG97', 'GG99', 'SILVA98'],required=True)
+
+    parser.add_argument('--output_dir', help='output directory [default: use temporary direcory, delete afterwards]')
     parser.add_argument('-t', '--threads', help='number of threads', type = int, default = 16)
     parser.add_argument('-q', '--quiet', help='Surpress all output', action='store_true')
     parser.add_argument('-e', '--evalue', help='e-value threshold for identifying hits', default = '1e-5')
@@ -42,16 +46,22 @@ if __name__ == '__main__':
     parser.add_argument('--pairs_as_singles', help='treat paired reads as singletons', action="store_true")
     parser.add_argument('-s', '--singletons', help='use singleton 16S/18S reads identified within paired reads', action="store_true")
     parser.add_argument('-b', '--bootstrap', help='bootstrap threshold required to accept classification (default = 0)', type=int, default=0)
-    parser.add_argument('-a', '--absolute', help='write absolute values instead of relative values', action='store_true')
-    parser.add_argument('-r', '--rank', help='taxonomic rank of table (choices: Domain, Phylum, Class, Order, Family, Genus, Species, GG_ID), (default = GG_ID)',
-                              choices=['Domain', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'GG_ID'], default='GG_ID')
+    parser.add_argument('-m', '--mode', help='write values as "rel"ative, "abs"olute or "pre"sence/absense (default = rel)', default="rel")
+    parser.add_argument('--rank', help='taxonomic rank of table (choices: Domain, Phylum, Class, Order, Family, Genus, Species, SEQ_ID), (default = SEQ_ID)',
+                              choices=['Domain', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'SEQ_ID'], default='SEQ_ID')
 
 
     args = parser.parse_args()
 
     # Parameters (simulates the output from ConfigFile class)
     projectParams = {}
-    projectParams['output_dir'] = args.output_dir
+
+    # output directory
+    outdir = args.output_dir
+    if outdir is None:
+        outdir = tempfile.mkdtemp('','CommunityM-')
+
+    projectParams['output_dir'] = outdir
 
     sample = {}
     splits = args.paired_reads.split(',')
@@ -62,7 +72,7 @@ if __name__ == '__main__':
     sample['singles'] = []
     if len(sample['pairs']) != 2:
         raise ValueError("Need 2 read files comma separated, found %i",len(splits))
-    sample_name = 'sample0'
+    sample_name = os.path.splitext(os.path.splitext(os.path.basename(pair1))[0])[0]
     sample['name'] = sample_name
     sample['edit_dist'] = args.edit_distance
     sample['min_align_len'] = args.min_align_len
@@ -78,8 +88,30 @@ if __name__ == '__main__':
     # Classify the reads taxonomically
     print "Classifying reads..."
     classifier = classifyBWA_16S.ClassifyBWA()
-    classifier.run(projectParams, sampleParams, '97', args.threads)#TODO: remove the hardcoded 97 here, and add ability to use Silva etc.
+    classifier.run(projectParams, sampleParams, args.ref_db, args.threads)
 
     print "Extracting last common ancestors of pairs..."
     lcaer = buildTable.BuildTable()
-    lcaer.run(projectParams, sampleParams, args.ignore_unmapped, args.pairs_as_singles, args.singletons, args.bootstrap, args.rank, args.absolute, args.output_biom)
+    sampleCounts, taxonomy = lcaer.paramsToCountsAndTaxonomy(
+        projectParams, sampleParams, args.ignore_unmapped, args.pairs_as_singles, args.singletons, args.bootstrap, args.rank, args.mode)
+
+    # Delete temporary directory if one was created
+    if args.output_dir is None:
+        shutil.rmtree(outdir)
+
+    # Write out results to file
+    fout = open(args.output_tsv, 'w')
+    keys = sampleCounts.keys()
+    if len(keys) != 1: raise
+    key = keys[0]
+    fout.write("\t".join(["#OTU_ID", key, 'ConsensusLineage']))
+    fout.write("\n")
+    i=0
+    for taxonomy in sampleCounts[key].keys():
+        fout.write("\t".join([str(i), str(sampleCounts[key][taxonomy]), taxonomy]))
+        fout.write("\n")
+        i += 1
+
+    fout.close()
+
+
