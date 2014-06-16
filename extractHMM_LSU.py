@@ -38,14 +38,14 @@ from seqUtils import extractSeqs
 
 class ExtractLSU(object):
     def __init__(self):
-        self.bacteriaModelFile = '/srv/whitlam/bio/db/communitym/LSU_bacteria.hmm'
-        self.bacteriaRevCompModelFile = '/srv/whitlam/bio/db/communitym/LSU_bacteria.revComp.hmm'
+        self.bacteriaModelFile = '/srv/whitlam/bio/db/communitym/ssu_hmm/LSU_bacteria.hmm'
+        self.bacteriaRevCompModelFile = '/srv/whitlam/bio/db/communitym/ssu_hmm/LSU_bacteria.revComp.hmm'
 
-        self.archaeaModelFile = '/srv/whitlam/bio/db/communitym/LSU_archaea.hmm'
-        self.archaeaRevCompModelFile = '/srv/whitlam/bio/db/communitym/LSU_archaea.revComp.hmm'
+        self.archaeaModelFile = '/srv/whitlam/bio/db/communitym/ssu_hmm/LSU_archaea.hmm'
+        self.archaeaRevCompModelFile = '/srv/whitlam/bio/db/communitym/ssu_hmm/LSU_archaea.revComp.hmm'
 
-        self.eukModelFile = '/srv/whitlam/bio/db/communitym/LSU_euk.hmm'
-        self.eukRevCompModelFile = '/srv/whitlam/bio/db/communitym/LSU_euk.revComp.hmm'
+        self.eukModelFile = '/srv/whitlam/bio/db/communitym/ssu_hmm/LSU_euk.hmm'
+        self.eukRevCompModelFile = '/srv/whitlam/bio/db/communitym/ssu_hmm/LSU_euk.revComp.hmm'
 
     def getHits(self, hitTable):
         seqIds = set()

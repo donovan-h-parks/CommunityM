@@ -34,7 +34,7 @@ import argparse
 import ntpath
 import os
 
-from biom.table import table_factory, SparseOTUTable
+from biom.table import Table
 
 from readConfig import ReadConfig
 from taxonomyUtils import ranksByLabel, ranksByLevel, rankPrefixes, LCA, parseTaxon
@@ -126,20 +126,22 @@ class BuildTable(object):
         fout = open(output, 'w')
 
         sampleIds = sorted(sampleCounts.keys())
-        otuIds = sorted(taxonomy.keys())
+        otuIds = sorted(map(str, xrange(0, len(taxonomy))))
 
         otuMetadata = []
         sparseData = []
-        for rowIndex, otuId in enumerate(otuIds):
+        for rowIndex, otuId in enumerate(taxonomy.keys()):
             otuMetadata.append(taxonomy[otuId])
 
             for colIndex, sampleId in enumerate(sampleIds):
                 if otuId in sampleCounts[sampleId]:
                     sparseData.append([rowIndex, colIndex, sampleCounts[sampleId][otuId]])
-
-        t = table_factory(sparseData, sampleIds, otuIds, None, otuMetadata, constructor=SparseOTUTable)
-
-        t.getBiomFormatJsonString("CommunityM", direct_io=fout)
+ 
+        table = Table(sparseData, otuIds, sampleIds, otuMetadata, None, table_id='CommunityM')
+        
+        table.to_json("CommunityM", direct_io=fout)
+        
+        fout.close()
 
     def run(self, projectParams, sampleParams, bIgnoreUnmapped, bTreatPairsAsSingles, bUseSingletons, bootstrap, rank, bMode, output):
         # read classification results for all sequence files in each sample
@@ -202,8 +204,8 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--singletons', help='use singleton 16S/18S reads', action="store_true")
     parser.add_argument('-b', '--bootstrap', help='bootstrap threshold required to accept classification (default = 0)', type=int, default=0)
     parser.add_argument('-m', '--mode', help='write values as "rel"ative, "abs"olute or "pre"sence/absense (default = rel)', default="rel",)
-    parser.add_argument('-r', '--rank', help='taxonomic rank of table (choices: Domain, Phylum, Class, Order, Family, Genus, Species, GG_ID), (default = GG_ID)',
-                              choices=['Domain', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'GG_ID'], default='GG_ID')
+    parser.add_argument('-r', '--rank', help='taxonomic rank of table (choices: Domain, Phylum, Class, Order, Family, Genus, Species, SEQ_ID), (default = SEQ_ID)',
+                              choices=['Domain', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'SEQ_ID'], default='SEQ_ID')
 
     args = parser.parse_args()
 
