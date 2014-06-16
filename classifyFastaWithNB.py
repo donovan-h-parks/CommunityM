@@ -34,15 +34,15 @@ import os, sys, tempfile, argparse
 
 class ClassifyFasta16S(object):
     def __init__(self):
-        self.dbFiles = {'GG94':'/srv/db/gg/2013_05/gg_13_5_otus/rep_set_aligned/94_otus.fasta',
-                          'GG97':'/srv/db/gg/2013_05/gg_13_5_otus/rep_set_aligned/97_otus.fasta',
-                          'GG99':'/srv/db/gg/2013_05/gg_13_5_otus/rep_set_aligned/99_otus.fasta',
-                          'SILVA98':'/srv/whitlam/bio/db/mothur/silva/SSURef_111_NR_trunc.fna' }
+        self.dbFiles = {'GG94':'/srv/whitlam/bio/db/communitym/gg/94_otus.fasta',
+                          'GG97':'/srv/whitlam/bio/db/communitym/gg/97_otus.fasta',
+                          'GG99':'/srv/whitlam/bio/db/communitym/gg/99_otus.fasta',
+                          'SILVA98':'/srv/whitlam/bio/db/communitym/silva/SSURef_111_NR_trunc.acgt.fna' }
 
-        self.taxonomyFiles = {'GG94':'/srv/db/gg/2013_05/gg_13_5_otus/taxonomy/94_otu_taxonomy.full.txt',
-                              'GG97':'/srv/db/gg/2013_05/gg_13_5_otus/taxonomy/97_otu_taxonomy.full.txt',
-                              'GG99':'/srv/db/gg/2013_05/gg_13_5_otus/taxonomy/99_otu_taxonomy.full.txt',
-                              'SILVA98':'/srv/whitlam/bio/db/mothur/silva/SSURef_111_NR_taxonomy.txt' }
+        self.taxonomyFiles = {'GG94':'/srv/whitlam/bio/db/communitym/gg/94_otu_taxonomy.full.txt',
+                              'GG97':'/srv/whitlam/bio/db/communitym/gg/97_otu_taxonomy.full.txt',
+                              'GG99':'/srv/whitlam/bio/db/communitym/gg/99_otu_taxonomy.full.txt',
+                              'SILVA98':'/srv/whitlam/bio/db/communitym/silva/SSURef_111_NR_taxonomy.txt' }
 
     def classify(self, fastaFiles, dbFile, taxonomyFile, threads, bQuiet):
         tempFD, tempFilePath = tempfile.mkstemp(dir='.')
