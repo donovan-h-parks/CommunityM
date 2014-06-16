@@ -33,11 +33,11 @@ import buildTable
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate a community profile based on 16S reads')
     parser.add_argument('-p','--paired-reads', help='metagenomic reads to use, comma separated',required=True)
-    parser.add_argument('-o','--output_tsv', help='output BIOM file', required=True)
+    parser.add_argument('-o','--output_tsv', help='output OTU table file name', required=True)
     parser.add_argument('-r', '--ref_db', help='Reference DB to use for classification (choices: GG94, GG97, GG99, SILVA98)', choices=['GG94', 'GG97', 'GG99', 'SILVA98'],required=True)
 
     parser.add_argument('--output_dir', help='output directory [default: use temporary direcory, delete afterwards]')
-    parser.add_argument('-t', '--threads', help='number of threads', type = int, default = 16)
+    parser.add_argument('-t', '--threads', help='number of threads', type = int, default = 1)
     parser.add_argument('-q', '--quiet', help='Surpress all output', action='store_true')
     parser.add_argument('-e', '--evalue', help='e-value threshold for identifying hits', default = '1e-5')
     parser.add_argument('--edit_distance', help='edit distance for LCA calculations', type = float, default = 0.15)
@@ -46,7 +46,7 @@ if __name__ == '__main__':
     parser.add_argument('--pairs_as_singles', help='treat paired reads as singletons', action="store_true")
     parser.add_argument('-s', '--singletons', help='use singleton 16S/18S reads identified within paired reads', action="store_true")
     parser.add_argument('-b', '--bootstrap', help='bootstrap threshold required to accept classification (default = 0)', type=int, default=0)
-    parser.add_argument('-m', '--mode', help='write values as "rel"ative, "abs"olute or "pre"sence/absense (default = rel)', default="rel")
+    parser.add_argument('-m', '--mode', help='write values as "rel"ative, "abs"olute or "pre"sence/absense (default = abs)', default="abs")
     parser.add_argument('--rank', help='taxonomic rank of table (choices: Domain, Phylum, Class, Order, Family, Genus, Species, SEQ_ID), (default = SEQ_ID)',
                               choices=['Domain', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'SEQ_ID'], default='SEQ_ID')
 
