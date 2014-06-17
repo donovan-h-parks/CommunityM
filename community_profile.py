@@ -33,11 +33,11 @@ import buildTable
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate a community profile based on 16S reads')
     parser.add_argument('-p','--paired-reads', help='metagenomic reads to use, comma separated',required=True)
-    parser.add_argument('-o','--output_tsv', help='output BIOM file', required=True)
+    parser.add_argument('-o','--output_tsv', help='output OTU table file name', required=True)
     parser.add_argument('-r', '--ref_db', help='Reference DB to use for classification (choices: GG94, GG97, GG99, SILVA98)', choices=['GG94', 'GG97', 'GG99', 'SILVA98'],required=True)
 
     parser.add_argument('--output_dir', help='output directory [default: use temporary direcory, delete afterwards]')
-    parser.add_argument('-t', '--threads', help='number of threads', type = int, default = 16)
+    parser.add_argument('-t', '--threads', help='number of threads', type = int, default = 1)
     parser.add_argument('-q', '--quiet', help='Surpress all output', action='store_true')
     parser.add_argument('-e', '--evalue', help='e-value threshold for identifying hits', default = '1e-5')
     parser.add_argument('--edit_distance', help='edit distance for LCA calculations', type = float, default = 0.15)

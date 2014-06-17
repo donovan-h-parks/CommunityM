@@ -193,7 +193,7 @@ class BuildTable(object):
 
     def run(self, projectParams, sampleParams, bIgnoreUnmapped, bTreatPairsAsSingles, bUseSingletons, bootstrap, rank, bMode, output):
         sampleCounts, taxonomy = self.paramsToCountsAndTaxonomy(projectParams, sampleParams, bIgnoreUnmapped, bTreatPairsAsSingles, bUseSingletons, bootstrap, rank, bMode)
-        biom = self.writeTable(output, sampleCounts, taxonomy)
+        self.writeTable(output, sampleCounts, taxonomy)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Build table summarizing classified 16S sequences.")
