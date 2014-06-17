@@ -46,10 +46,9 @@ if __name__ == '__main__':
     parser.add_argument('--pairs_as_singles', help='treat paired reads as singletons', action="store_true")
     parser.add_argument('-s', '--singletons', help='use singleton 16S/18S reads identified within paired reads', action="store_true")
     parser.add_argument('-b', '--bootstrap', help='bootstrap threshold required to accept classification (default = 0)', type=int, default=0)
-    parser.add_argument('-m', '--mode', help='write values as "rel"ative, "abs"olute or "pre"sence/absense (default = rel)', default="rel")
+    parser.add_argument('-m', '--mode', help='write values as "rel"ative, "abs"olute or "pre"sence/absense (default = abs)', default="abs")
     parser.add_argument('--rank', help='taxonomic rank of table (choices: Domain, Phylum, Class, Order, Family, Genus, Species, SEQ_ID), (default = SEQ_ID)',
                               choices=['Domain', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'SEQ_ID'], default='SEQ_ID')
-
 
     args = parser.parse_args()
 
@@ -104,7 +103,7 @@ if __name__ == '__main__':
     keys = sampleCounts.keys()
     if len(keys) != 1: raise
     key = keys[0]
-    fout.write("\t".join(["#OTU_ID", key, 'ConsensusLineage']))
+    fout.write("\t".join(["#OTU_ID", key, 'Consensus Lineage']))
     fout.write("\n")
     i=0
     for taxonomy in sampleCounts[key].keys():

@@ -34,8 +34,6 @@ import argparse
 import ntpath
 import os
 
-from biom.table import Table
-
 from readConfig import ReadConfig
 from taxonomyUtils import ranksByLabel, ranksByLevel, rankPrefixes, LCA, parseTaxon
 
@@ -122,30 +120,24 @@ class BuildTable(object):
 
         self.parseClassification(seqClassification, bIgnoreUnmapped, bootstrapThreshold, rankIndex, counts, taxonomy)
 
-    def constructBiom(self, sampleCounts, taxonomy):
-        sampleIds = sorted(sampleCounts.keys())
-        otuIds = sorted(map(str, xrange(0, len(taxonomy))))
-
-        otuMetadata = []
-        sparseData = []
-        for rowIndex, otuId in enumerate(taxonomy.keys()):
-            otuMetadata.append(taxonomy[otuId])
-
-            for colIndex, sampleId in enumerate(sampleIds):
-                if otuId in sampleCounts[sampleId]:
-                    sparseData.append([rowIndex, colIndex, sampleCounts[sampleId][otuId]])
-
-        table = Table(sparseData, otuIds, sampleIds, otuMetadata, None, table_id='CommunityM')
-        return table
-
-
-    def write(self, output, sampleCounts, taxonomy):
+    def writeTable(self, output, sampleCounts, taxonomy):
         fout = open(output, 'w')
+        
+        fout.write("#OTU_ID")
+        fout.write("\t" + "\t".join(sampleCounts.keys()))
+        fout.write("\tConsensus Lineage\n")
 
-        table = constructBiom(sampleCounts, taxonomy)
-
-        table.to_json("CommunityM", direct_io=fout)
-
+        for outId, taxonomy in enumerate(taxonomy.keys()):
+            fout.write(str(outId))
+            
+            for sampleId in sampleCounts.keys():
+                if taxonomy in sampleCounts[sampleId]:
+                    fout.write('\t%f' % sampleCounts[sampleId][taxonomy])
+                else:
+                    fout.write('\t0')
+                    
+            fout.write('\t' + taxonomy + '\n')
+                      
         fout.close()
 
     def paramsToCountsAndTaxonomy(self, projectParams, sampleParams, bIgnoreUnmapped, bTreatPairsAsSingles, bUseSingletons, bootstrap, rank, bMode):
@@ -200,17 +192,11 @@ class BuildTable(object):
 
 
     def run(self, projectParams, sampleParams, bIgnoreUnmapped, bTreatPairsAsSingles, bUseSingletons, bootstrap, rank, bMode, output):
-
         sampleCounts, taxonomy = self.paramsToCountsAndTaxonomy(projectParams, sampleParams, bIgnoreUnmapped, bTreatPairsAsSingles, bUseSingletons, bootstrap, rank, bMode)
-        biom = self.constructBiom(sampleCounts, taxonomy)
-
-        # write out results in BIOM format
-        fout = open(output, 'w')
-        biom.to_json("CommunityM", direct_io=fout)
-        fout.close()
+        biom = self.writeTable(output, sampleCounts, taxonomy)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Build table in BIOM format summarizing classified 16S sequences.")
+    parser = argparse.ArgumentParser(description="Build table summarizing classified 16S sequences.")
 
     parser.add_argument('config_file', help='project config file')
     parser.add_argument('output', help='output file')
@@ -218,7 +204,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--pairs_as_singles', help='treat paired reads as singletons', action="store_true")
     parser.add_argument('-s', '--singletons', help='use singleton 16S/18S reads', action="store_true")
     parser.add_argument('-b', '--bootstrap', help='bootstrap threshold required to accept classification (default = 0)', type=int, default=0)
-    parser.add_argument('-m', '--mode', help='write values as "rel"ative, "abs"olute or "pre"sence/absense (default = rel)', default="rel",)
+    parser.add_argument('-m', '--mode', help='write values as "rel"ative, "abs"olute or "pre"sence/absense (default = abs)', choices=['rel', 'abs', 'pre'], default="abs")
     parser.add_argument('-r', '--rank', help='taxonomic rank of table (choices: Domain, Phylum, Class, Order, Family, Genus, Species, SEQ_ID), (default = SEQ_ID)',
                               choices=['Domain', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'SEQ_ID'], default='SEQ_ID')
 
