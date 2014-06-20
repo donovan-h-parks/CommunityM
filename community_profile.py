@@ -49,6 +49,7 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--mode', help='write values as "rel"ative, "abs"olute or "pre"sence/absense (default = abs)', default="abs")
     parser.add_argument('--rank', help='taxonomic rank of table (choices: Domain, Phylum, Class, Order, Family, Genus, Species, SEQ_ID), (default = SEQ_ID)',
                               choices=['Domain', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'SEQ_ID'], default='SEQ_ID')
+    parser.add_argument('-a', '--align_len', type=float, help='fraction of read that must align for identifying hits', default = '0.5')
 
     args = parser.parse_args()
 
@@ -82,7 +83,7 @@ if __name__ == '__main__':
     # Extract the 16S reads
     print "Extracting 16S reads.."
     extractor = extractHMM_16S.Extract16S()
-    extractor.run(projectParams, sampleParams, args.threads, args.evalue, args.quiet)
+    extractor.run(projectParams, sampleParams, args.threads, args.evalue, args.align_len, args.quiet)
 
     # Classify the reads taxonomically
     print "Classifying reads..."
