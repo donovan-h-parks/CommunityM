@@ -38,8 +38,16 @@ def readTaxonomy(taxonomyFile):
     ggIdToTaxonomy = {}
     for line in open(taxonomyFile):
         lineSplit = line.split('\t')
-        ggIdToTaxonomy[lineSplit[0]] = lineSplit[1].rstrip()
+        
+        seqId = lineSplit[0]
+        taxonomy = [x.strip() for x in lineSplit[1].split(';')]
+        
+        if 'id__' not in taxonomy[-1]:
+            # missing sequence ID field
+            taxonomy += ['id__' + str(seqId)]
 
+        ggIdToTaxonomy[seqId] = taxonomy
+        
     return ggIdToTaxonomy
 
 def parseTaxon(taxon):
@@ -64,7 +72,7 @@ def LCA(taxonomy1, taxonomy2):
             if 'unmapped' in t1 or 'unmapped' in t2:
                 taxonomy.append(rankPrefixes[i] + 'unmapped')
             else:
-                taxonomy.append(rankPrefixes[i] + 'unclassified')
+                taxonomy.append(rankPrefixes[i] + 'unresolved_by_lca')
         else:
             if b1 == 0 and b2 == 0:
                 taxonomy.append(t1)

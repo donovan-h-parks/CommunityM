@@ -38,7 +38,6 @@ class SummarizeTableAtRank(object):
     def __init__(self):
         pass
 
-
     def run(self, inputTable, summaryRank, otherThreshold, outputFile):
         rankIndex = ranksByLabel[summaryRank]
 

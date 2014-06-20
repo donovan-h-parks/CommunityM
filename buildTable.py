@@ -48,9 +48,11 @@ class BuildTable(object):
 
             taxaName, _ = parseTaxon(taxa[rankIndex])
 
-            if bIgnoreUnmapped and 'unmapped' in taxaName:
-                countUnmapped += 1
-                continue
+            if bIgnoreUnmapped:
+                # check if taxa is unmapped, or if we are building a table at the sequence id level check if the species is unmapped
+                if 'unmapped' in taxaName or (rankIndex == ranksByLabel['SEQ_ID'] and 'unmapped' in parseTaxon(taxa[ranksByLabel['Species']])[0]):
+                    countUnmapped += 1
+                    continue
 
             taxaDict = {}
             taxaList = []
@@ -58,9 +60,7 @@ class BuildTable(object):
                 taxaName, bootstrapSupport = parseTaxon(taxa[r])
 
                 if bootstrapSupport < bootstrapThreshold:
-                    taxaName = rankPrefixes[r]
-                else:
-                    taxaName = taxaName.replace('unclassified', '')
+                    taxaName = rankPrefixes[r] + 'unclassified'
 
                 taxaDict[ranksByLevel[r]] = taxaName
                 taxaList.append(taxaName)
@@ -92,6 +92,8 @@ class BuildTable(object):
 
                 seqClassification[seqId] = taxa
 
+        identicalSeq = 0
+        nonIdenticalSeq = 0
         with open(classificationFile2) as fin:
             for line in fin:
                 lineSplit = line.split('\t')
@@ -100,7 +102,17 @@ class BuildTable(object):
 
                 if not bTreatPairsAsSingles:
                     seqId = seqId[0:seqId.rfind('/')]
-                    seqClassification[seqId] = LCA(taxa, seqClassification[seqId])
+                    
+                    
+                    
+                    if 'unmapped' not in ';'.join(seqClassification[seqId]) and 'unmapped' not in ';'.join(taxa):
+                        if seqClassification[seqId][7] == taxa[7]:
+                            identicalSeq += 1
+                        else:
+                            nonIdenticalSeq += 1
+                    
+                    
+                    seqClassification[seqId] = LCA(taxa, seqClassification[seqId])                           
                 else:
                     seqClassification[seqId] = taxa
 
@@ -184,7 +196,6 @@ class BuildTable(object):
                         counts[taxa] = 1.
                     else:
                         counts[taxa] = 0.
-            # else bMode = "rel"
 
             sampleCounts[sampleParams[sample]['name']] = counts
 
@@ -199,7 +210,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Build table summarizing classified 16S sequences.")
 
     parser.add_argument('config_file', help='project config file')
-    parser.add_argument('output', help='output file')
+    parser.add_argument('output_table', help='output file')
     parser.add_argument('-u', '--ignore_unmapped', help='do not consider unmapped reads', action="store_true")
     parser.add_argument('-p', '--pairs_as_singles', help='treat paired reads as singletons', action="store_true")
     parser.add_argument('-s', '--singletons', help='use singleton 16S/18S reads', action="store_true")
@@ -214,4 +225,4 @@ if __name__ == '__main__':
     projectParams, sampleParams = rc.readConfig(args.config_file, outputDirExists = True)
 
     buildTable = BuildTable()
-    buildTable.run(projectParams, sampleParams, args.ignore_unmapped, args.pairs_as_singles, args.singletons, args.bootstrap, args.rank, args.mode, args.output)
+    buildTable.run(projectParams, sampleParams, args.ignore_unmapped, args.pairs_as_singles, args.singletons, args.bootstrap, args.rank, args.mode, args.output_table)

@@ -74,19 +74,8 @@ class Extract16S(object):
         self.bacteriaModelFile = '/srv/whitlam/bio/db/communitym/ssu_hmm/SSU_bacteria.hmm'
         self.archaeaModelFile = '/srv/whitlam/bio/db/communitym/ssu_hmm/SSU_archaea.hmm'
         self.eukModelFile = '/srv/whitlam/bio/db/communitym/ssu_hmm/SSU_euk.hmm'
-
-    def __getHits(self, hitTable):
-        seqIds = set()
-        for line in open(hitTable):
-            if line[0] == '#' or line.strip() == '':
-                continue
-
-            seqId = line.split()[0].split('/')[0]   # remove read identifier
-            seqIds.add(seqId)
-
-        return seqIds
-
-    def __hmmSearch(self, seqFile, evalue, threadsPerSample, outputPrefix):
+        
+    def hmmSearch(self, seqFile, evalue, threadsPerSample, outputPrefix):
         if seqFile.endswith('gz'):
             pipe = 'zcat ' + seqFile + ' | '
         else:
@@ -95,11 +84,28 @@ class Extract16S(object):
         if '.fq' in seqFile or '.fastq' in seqFile:
             pipe += 'fastq2fasta - | '
 
-        os.system(pipe + 'nhmmer --cpu ' + str(threadsPerSample) + ' --noali  -o ' + outputPrefix + '.bacteria.txt --tblout ' + outputPrefix + '.bacteria.table.txt -E ' + str(evalue) + ' ' + self.bacteriaModelFile + ' -')
-        os.system(pipe + 'nhmmer --cpu ' + str(threadsPerSample) + ' --noali  -o ' + outputPrefix + '.archaea.txt --tblout ' + outputPrefix + '.archaea.table.txt -E ' + str(evalue) + ' ' + self.archaeaModelFile + ' -')
-        os.system(pipe + 'nhmmer --cpu ' + str(threadsPerSample) + ' --noali  -o ' + outputPrefix + '.euk.txt --tblout ' + outputPrefix + '.euk.table.txt -E ' + str(evalue) + ' ' + self.eukModelFile + ' -')
+        os.system(pipe + 'nhmmer --cpu ' + str(threadsPerSample) + ' --noali -o ' + outputPrefix + '.bacteria.txt --tblout ' + outputPrefix + '.bacteria.table.txt -E ' + str(evalue) + ' ' + self.bacteriaModelFile + ' - > /dev/null')
+        os.system(pipe + 'nhmmer --cpu ' + str(threadsPerSample) + ' --noali -o ' + outputPrefix + '.archaea.txt --tblout ' + outputPrefix + '.archaea.table.txt -E ' + str(evalue) + ' ' + self.archaeaModelFile + ' - > /dev/null')
+        os.system(pipe + 'nhmmer --cpu ' + str(threadsPerSample) + ' --noali -o ' + outputPrefix + '.euk.txt --tblout ' + outputPrefix + '.euk.table.txt -E ' + str(evalue) + ' ' + self.eukModelFile + ' - > /dev/null')
 
-    def __processPairs(self, pairs, evalue, outputDir, sample, threadsPerSample, queueOut):
+    def __getHits(self, hitTable, alignLenThreshold):
+        seqIds = set()
+        for line in open(hitTable):
+            if line[0] == '#' or line.strip() == '':
+                continue
+
+            lineSplit =  line.split()
+            
+            seqId = lineSplit[0].split('/')[0]   # remove read identifier
+            alignLen = abs(int(lineSplit[6]) - int(lineSplit[7]))  
+            seqLen = int(lineSplit[10])
+            
+            if alignLen >= alignLenThreshold * seqLen:
+                seqIds.add(seqId)
+
+        return seqIds
+
+    def __processPairs(self, pairs, evalue, alignLenThreshold, outputDir, sample, threadsPerSample, queueOut):
         for i in xrange(0, len(pairs), 2):
             pair1 = pairs[i]
             pair2 = pairs[i+1]
@@ -107,17 +113,17 @@ class Extract16S(object):
             outputPrefix1 = os.path.join(outputDir,'extracted',sample + '.' + pair1[pair1.rfind('/')+1:pair1.rfind('.')])
             outputPrefix2 = os.path.join(outputDir,'extracted',sample + '.' + pair2[pair2.rfind('/')+1:pair2.rfind('.')])
 
-            self.__hmmSearch(pair1, evalue, threadsPerSample, outputPrefix1)
-            self.__hmmSearch(pair2, evalue, threadsPerSample, outputPrefix2)
+            self.hmmSearch(pair1, evalue, threadsPerSample, outputPrefix1)
+            self.hmmSearch(pair2, evalue, threadsPerSample, outputPrefix2)
 
             # reads hits
-            hitsBacteria1 = self.__getHits(outputPrefix1 + '.bacteria.table.txt')
-            hitsArchaea1 = self.__getHits(outputPrefix1 + '.archaea.table.txt')
-            hitsEuk1 = self.__getHits(outputPrefix1 + '.euk.table.txt')
+            hitsBacteria1 = self.__getHits(outputPrefix1 + '.bacteria.table.txt', alignLenThreshold)
+            hitsArchaea1 = self.__getHits(outputPrefix1 + '.archaea.table.txt', alignLenThreshold)
+            hitsEuk1 = self.__getHits(outputPrefix1 + '.euk.table.txt', alignLenThreshold)
             
-            hitsBacteria2 = self.__getHits(outputPrefix2 + '.bacteria.table.txt')
-            hitsArchaea2 = self.__getHits(outputPrefix2 + '.archaea.table.txt')
-            hitsEuk2 = self.__getHits(outputPrefix2 + '.euk.table.txt')
+            hitsBacteria2 = self.__getHits(outputPrefix2 + '.bacteria.table.txt', alignLenThreshold)
+            hitsArchaea2 = self.__getHits(outputPrefix2 + '.archaea.table.txt', alignLenThreshold)
+            hitsEuk2 = self.__getHits(outputPrefix2 + '.euk.table.txt', alignLenThreshold)
 
             # combine hits
             hits1 = hitsBacteria1.union(hitsArchaea1).union(hitsEuk1)
@@ -229,18 +235,18 @@ class Extract16S(object):
                
             queueOut.put(hitRecord)
 
-    def __processSingles(self, singles, evalue, outputDir, sample, threadsPerSample, queueOut):
+    def __processSingles(self, singles, evalue, alignLenThreshold, outputDir, sample, threadsPerSample, queueOut):
         for i in xrange(0, len(singles)):
             seqFile = singles[i]
 
             outputPrefix = outputDir + 'extracted/' + sample + '.' + seqFile[seqFile.rfind('/')+1:seqFile.rfind('.')]
 
-            self.__hmmSearch(seqFile, evalue, threadsPerSample, outputPrefix)
+            self.hmmSearch(seqFile, evalue, threadsPerSample, outputPrefix)
 
             # reads hits
-            hitsBacteria = self.__getHits(outputPrefix + '.bacteria.table.txt')
-            hitsArchaea = self.__getHits(outputPrefix + '.archaea.table.txt')
-            hitsEuk = self.__getHits(outputPrefix + '.euk.table.txt')
+            hitsBacteria = self.__getHits(outputPrefix + '.bacteria.table.txt', alignLenThreshold)
+            hitsArchaea = self.__getHits(outputPrefix + '.archaea.table.txt', alignLenThreshold)
+            hitsEuk = self.__getHits(outputPrefix + '.euk.table.txt', alignLenThreshold)
 
             hits = hitsBacteria.union(hitsArchaea).union(hitsEuk)
 
@@ -334,7 +340,7 @@ class Extract16S(object):
                     print '  Extracting putative 16S/18S reads:'
                     print '  Identified 16S/18 reads written to: ' + hitRecord.allSeqFile
   
-    def __runSample(self, evalue, outDir, threadsPerSample, queueIn, queueOut):
+    def __runSample(self, evalue, alignLenThreshold, outDir, threadsPerSample, queueIn, queueOut):
         """Run each sample in a separate thread."""
         
         while True:
@@ -343,12 +349,12 @@ class Extract16S(object):
                 break 
             
             # identify 16S sequences in single-end reads
-            self.__processSingles(singles, evalue, outDir, sample, threadsPerSample, queueOut)
+            self.__processSingles(singles, evalue, alignLenThreshold, outDir, sample, threadsPerSample, queueOut)
             
             # identify 16S sequences in paired-end reads
-            self.__processPairs(pairs, evalue, outDir, sample, threadsPerSample, queueOut)
+            self.__processPairs(pairs, evalue, alignLenThreshold, outDir, sample, threadsPerSample, queueOut)
 
-    def run(self, projectParams, sampleParams, threads, evalue, bQuiet):
+    def run(self, projectParams, sampleParams, threads, evalue, alignLenThreshold, bQuiet):
         print '\nProcessing %s sample(s).\n' % len(sampleParams)
 
         os.makedirs(os.path.join(projectParams['output_dir'],'extracted'))
@@ -363,7 +369,7 @@ class Extract16S(object):
             pairs = sampleParams[sample]['pairs']
             singles = sampleParams[sample]['singles']
             
-            numFiles += len(pairs) + len(singles)
+            numFiles += len(pairs)/2 + len(singles)
             
             workerQueue.put((sample, pairs, singles))
             
@@ -371,7 +377,7 @@ class Extract16S(object):
             workerQueue.put((None, None, None))
             
         threadsPerSample = max(1, int(threads / len(sampleParams)))
-        calcProc = [mp.Process(target = self.__runSample, args = (evalue, projectParams['output_dir'], threadsPerSample, workerQueue, writerQueue)) for _ in range(threads)]
+        calcProc = [mp.Process(target = self.__runSample, args = (evalue, alignLenThreshold, projectParams['output_dir'], threadsPerSample, workerQueue, writerQueue)) for _ in range(threads)]
         writeProc = mp.Process(target = self.__storeResults, args = (numFiles, writerQueue))
 
         writeProc.start()
@@ -393,7 +399,8 @@ if __name__ == '__main__':
 
     parser.add_argument('-t', '--threads', help='number of threads', type=int, default = 1)
     parser.add_argument('-e', '--evalue', help='e-value threshold for identifying hits', default = '1e-5')
-    parser.add_argument('-q', '--quiet', help='Surpress all output', action='store_true')
+    parser.add_argument('-a', '--align_len', type=float, help='fraction of read that must align for identifying hits', default = '0.5')
+    parser.add_argument('-q', '--quiet', help='suppress all output', action='store_true')
 
     args = parser.parse_args()
 
@@ -402,4 +409,4 @@ if __name__ == '__main__':
     projectParams, sampleParams = rc.readConfig(args.config_file, outputDirExists = False)
 
     extract16S = Extract16S()
-    extract16S.run(projectParams, sampleParams, args.threads, args.evalue, args.quiet)
+    extract16S.run(projectParams, sampleParams, args.threads, args.evalue, args.align_len, args.quiet)

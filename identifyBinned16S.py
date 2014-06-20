@@ -31,6 +31,7 @@ __email__ = 'donovan.parks@gmail.com'
 import os
 import sys
 import argparse
+import gzip
 
 from extractHMM_16S import Extract16S
 
@@ -209,7 +210,7 @@ class IdentifyBinned16S(object):
         # identify 16S reads from contigs/scaffolds
         print 'Identifying 16S genes on assembled contigs/scaffolds.'
         extract16S = Extract16S()
-        extract16S.hmmSearch(contigFile, threads, evalueThreshold, outputDir + '/identified16S')
+        extract16S.hmmSearch(contigFile, evalueThreshold, threads, outputDir + '/identified16S')
 
         # read HMM hits
         print 'Parsing HMM results.'
@@ -283,7 +284,7 @@ if __name__ == '__main__':
                                           formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('contig_file', help='FASTA file of assembled contigs/scaffolds')
-    parser.add_argument('bin_dir', help='directory containing bin')
+    parser.add_argument('bin_dir', help='directory containing bins')
     parser.add_argument('output_dir', help='output directory')
 
     parser.add_argument('-x', '--extension', help='extension of bins', default = 'fna')
