@@ -175,11 +175,12 @@ class BuildTable(object):
                     classificationFile = prefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.difference.16S.tsv'
                     self.parseSingleClassificationFile(classificationFile, bIgnoreUnmapped, bootstrap, rankIndex, counts, taxonomy)
 
-                    singles = sampleParams[sample]['singles']
-                    for single in singles:
-                        singleBase = ntpath.basename(single)
-                        classificationFile = prefix + '.' + singleBase[0:singleBase.rfind('.')] + '.16S.tsv'
-                        self.parseSingleClassificationFile(classificationFile, bIgnoreUnmapped, bootstrap, rankIndex, counts, taxonomy)
+            if bUseSingletons:
+                singles = sampleParams[sample]['singles']
+                for single in singles:
+                    singleBase = ntpath.basename(single)
+                    classificationFile = prefix + '.' + singleBase[0:singleBase.rfind('.')] + '.16S.tsv'
+                    self.parseSingleClassificationFile(classificationFile, bIgnoreUnmapped, bootstrap, rankIndex, counts, taxonomy)
 
             if bMode == "rel":
                 # relative values
