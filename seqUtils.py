@@ -107,20 +107,24 @@ def readFastq(fastqFile, seqs):
 
 def extractSeqs(f, seqIdsToExtract):
     ''' Sequence ids indicate the sequence from which reads were taken (i.e., do NOT contain a /1 or /2). '''
-    if f.endswith('gz'):
-        if '.fastq' in f or '.fq' in f:
-            return extractSeqsFastqGz(f, seqIdsToExtract)
+    if f.endswith('.gz'):
+        openFile = gzip.open
     else:
-        return extractSeqsFasta(f, seqIdsToExtract)
+        openFile = open
+
+    if f.endswith('.fq') or f.endswith('.fastq') or f.endswith('.fq.gz') or f.endswith('.fastq.gz'):
+        return extractSeqsFastq(openFile(f), seqIdsToExtract)
+    else:
+        return extractSeqsFasta(openFile(f), seqIdsToExtract)
 
     print '[Error] Unknown file type'
     sys.exit()
 
-def extractSeqsFastqGz(fastqFile, seqIdsToExtract):
+def extractSeqsFastq(fastqStream, seqIdsToExtract):
     seqs = {}
 
     lineNum = 0
-    for line in gzip.open(fastqFile):
+    for line in fastqStream:
         if lineNum == 0:
             readId = line[1:].split()[0].rstrip()
             seqId = readId
@@ -139,11 +143,11 @@ def extractSeqsFastqGz(fastqFile, seqIdsToExtract):
 
     return seqs
 
-def extractSeqsFasta(fastaFile, seqIdsToExtract):
+def extractSeqsFasta(fastaStream, seqIdsToExtract):
     seqs = {}
 
     bKeep = False
-    for line in open(fastaFile):
+    for line in fastaStream:
         if line[0] == '>':
             if bKeep:
                 seqs[seqId] = [readId, ''.join(seq)]
@@ -168,19 +172,23 @@ def extractSeqsFasta(fastaFile, seqIdsToExtract):
 
 def extractReads(f, readIdsToExtract):
     ''' Read ids identify individual reads taken from a sequence (i.e., contain a /1 or /2). '''
-    if f.endswith('gz'):
-        if '.fastq' in f or '.fq' in f:
-            return extractReadsFastqGz(f, readIdsToExtract)
+    if f.endswith('.gz'):
+        openFile = gzip.open
     else:
-        return extractReadsFasta(f, readIdsToExtract)
+        openFile = open
+
+    if f.endswith('.fq') or f.endswith('.fastq') or f.endswith('.fq.gz') or f.endswith('.fastq.gz'):
+        return extractReadsFastq(openFile(f), readIdsToExtract)
+    else:
+        return extractReadsFasta(openFile(f), readIdsToExtract)
 
     print '[Error] Unknown file type'
     sys.exit()
 
-def extractReadsFastqGz(fastqFile, readIdsToExtract):
+def extractReadsFastq(fastqStream, readIdsToExtract):
     reads = {}
     lineNum = 0
-    for line in gzip.open(fastqFile):
+    for line in fastqStream:
         if lineNum == 0:
             readId = line[1:].split()[0].rstrip()
             bKeep = (readId in readIdsToExtract)
@@ -193,11 +201,11 @@ def extractReadsFastqGz(fastqFile, readIdsToExtract):
 
     return reads
 
-def extractReadsFasta(fastaFile, readIdsToExtract):
+def extractReadsFasta(fastaStream, readIdsToExtract):
     reads = {}
 
     bKeep = False
-    for line in open(fastaFile):
+    for line in fastaStream:
         if line[0] == '>':
             if bKeep:
                 reads[readId] = ''.join(read)
