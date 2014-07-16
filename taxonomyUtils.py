@@ -64,12 +64,14 @@ def parseTaxon(taxon):
 
 def LCA(taxonomy1, taxonomy2):
     taxonomy = []
+    bUnmapped = False
     for i in xrange(0, len(ranksByLevel)-1):
         t1, b1 = parseTaxon(taxonomy1[i])
         t2, b2 = parseTaxon(taxonomy2[i])
 
         if t1 != t2:
             if 'unmapped' in t1 or 'unmapped' in t2:
+                bUnmapped = True
                 taxonomy.append(rankPrefixes[i] + 'unmapped')
             else:
                 taxonomy.append(rankPrefixes[i] + 'unresolved_by_lca')
@@ -80,10 +82,13 @@ def LCA(taxonomy1, taxonomy2):
                 taxonomy.append(t1 + '(' + str(min(b1, b2)) + ')')
 
     # return reference sequence id
-    t1, b1 = parseTaxon(taxonomy1[len(ranksByLevel)-1])
-    if b1 == 0:
-        taxonomy.append(t1)
+    if not bUnmapped:
+        t1, b1 = parseTaxon(taxonomy1[len(ranksByLevel)-1])
+        if b1 == 0:
+            taxonomy.append(t1)
+        else:
+            taxonomy.append(t1 + '(' + str(min(b1, b2)) + ')')
     else:
-        taxonomy.append(t1 + '(' + str(min(b1, b2)) + ')')
+        taxonomy.append('id__unmapped')
 
     return taxonomy
