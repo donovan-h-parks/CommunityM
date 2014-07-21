@@ -239,7 +239,7 @@ class Extract16S(object):
         for i in xrange(0, len(singles)):
             seqFile = singles[i]
 
-            outputPrefix = outputDir + 'extracted/' + sample + '.' + seqFile[seqFile.rfind('/')+1:seqFile.rfind('.')]
+            outputPrefix = os.path.join(outputDir, 'extracted', sample + '.' + seqFile[seqFile.rfind('/')+1:seqFile.rfind('.')])
 
             self.hmmSearch(seqFile, evalue, threadsPerSample, outputPrefix)
 
@@ -357,7 +357,7 @@ class Extract16S(object):
     def run(self, projectParams, sampleParams, threads, evalue, alignLenThreshold, bQuiet):
         print '\nProcessing %s sample(s).\n' % len(sampleParams)
 
-        os.makedirs(os.path.join(projectParams['output_dir'],'extracted'))
+        os.makedirs(os.path.join(projectParams['output_dir'], 'extracted'))
 
         self.bQuiet = bQuiet
         

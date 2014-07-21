@@ -48,12 +48,12 @@ class LinkBinsTo16S(object):
 
         print '\nCreating graph showing linked 16S reads.'
         bamFile = combinedFile[0:combinedFile.rfind('.')] + '.bam'
-        graphFile = outputDir + 'linksToBins.gdf'
+        graphFile = os.path.join(outputDir, 'linksToBins.gdf')
         os.system('createPairedEndGraph.py ' + bamFile + ' ' + binDir + ' ' + graphFile)
         print '  Graph written to: ' + graphFile
 
         print 'Tabulating links.'
-        linkFile = outputDir + 'linkedContigs.tsv'
+        linkFile = os.path.join(outputDir, 'linkedContigs.tsv')
         os.system('associateUnbinnedSeqs.py ' + graphFile + ' ' + linkFile)
         print '  Link file written reads to: ' + linkFile
 
@@ -62,22 +62,23 @@ class LinkBinsTo16S(object):
         projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = True)
 
         # check if links directory already exists
-        if not os.path.exists(projectParams['output_dir'] + 'linksToBin'):
-            os.makedirs(projectParams['output_dir'] + 'linksToBin')
+        linkFile = os.path.join(projectParams['output_dir'], 'linksToBin')
+        if not os.path.exists(linkFile):
+            os.makedirs(linkFile)
         else:
             rtn = raw_input('Remove previously identified links (Y or N)? ')
             if rtn.lower() == 'y' or rtn.lower() == 'yes':
-                files = os.listdir(projectParams['output_dir'] + 'linksToBin')
+                files = os.listdir(linkFile)
                 for f in files:
-                    os.remove(projectParams['output_dir'] + 'linksToBin/' + f)
+                    os.remove(os.path.join(linkFile, f))
             else:
                 sys.exit()
 
-        outputDir = projectParams['output_dir'] + 'linksToBin/'
+        outputDir = os.path.join(projectParams['output_dir'], 'linksToBin')
 
         # create combined file with reference sequences and assembled 16S sequences
         print 'Combining unbinned reference sequences with de novo assembled 16S sequences.'
-        combinedFile = outputDir + 'scaffolds.combined.fasta'
+        combinedFile = os.path.join(outputDir, 'scaffolds.combined.fasta')
         os.system('cat ' + contigFile + ' ' + assemblies16S + ' > ' + combinedFile)
 
         # create combined 16S read files
@@ -85,7 +86,7 @@ class LinkBinsTo16S(object):
         reads1 = ''
         reads2 = ''
         for sample in sampleParams:
-            extractedPrefix = projectParams['output_dir'] + 'extracted/' + sample
+            extractedPrefix = os.path.join(projectParams['output_dir'], 'extracted', sample)
             pairs = sampleParams[sample]['pairs']
             for i in xrange(0, len(pairs), 2):
                 pair1Base = ntpath.basename(pairs[i])
@@ -97,11 +98,11 @@ class LinkBinsTo16S(object):
                 reads1 += classificationFile1 + ' '
                 reads2 += classificationFile2 + ' '
 
-        os.system('cat ' + reads1 + ' > ' + outputDir + 'ssu.1.fasta')
-        os.system('cat ' + reads2 + ' > ' + outputDir + 'ssu.2.fasta')
+        os.system('cat ' + reads1 + ' > ' + os.path.join(outputDir, 'ssu.1.fasta'))
+        os.system('cat ' + reads2 + ' > ' + os.path.join(outputDir, 'ssu.2.fasta'))
 
         # identify 16S sequences in paired-end reads
-        self.link16S(combinedFile, outputDir + 'ssu.1.fasta', outputDir + 'ssu.2.fasta', binDir, threads, outputDir)
+        self.link16S(combinedFile, os.path.join(outputDir, 'ssu.1.fasta'), os.path.join(outputDir, 'ssu.2.fasta'), binDir, threads, outputDir)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Link assembled 16S sequences to bins.",

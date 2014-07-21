@@ -60,8 +60,8 @@ class MapReads(object):
 
         # get length of each reference sequences
         for ref in bam.references:
-            fout1 = open(outputDir + '/' + ref + '.1.fna', 'w')
-            fout2 = open(outputDir + '/' + ref + '.2.fna', 'w')
+            fout1 = open(os.path.join(outputDir, ref + '.1.fna', 'w'))
+            fout2 = open(os.path.join(outputDir, ref + '.2.fna', 'w'))
             for read in bam.fetch(reference = ref):
                 if read.tid != read.rnext:
                     continue

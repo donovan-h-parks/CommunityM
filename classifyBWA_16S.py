@@ -141,11 +141,11 @@ class ClassifyBWA(object):
 
         numReads = 2 * len(readsMappedTo16S)
         print '  Number of paired reads: %d' % numReads
-        print '    Reads unmapped: %d (%.2f%%)' % (counts['unmapped'], float(counts['unmapped'])*100/numReads)
-        print '    Reads failing edit distance threshold: %d (%.2f%%)' % (counts['edit dist'], float(counts['edit dist'])*100/numReads)
-        print '    Reads failing alignment length threshold: %d (%.2f%%)' % (counts['align len'], float(counts['align len'])*100/numReads)
-        print '    # multiple primary mappings: %d (%.2f%%)' % (numMultiplePrimaryMappings, float(numMultiplePrimaryMappings)*100/numReads)
-        print '    # equally good secondary mappings: %d (%.2f%%)' % (numSecondaryMappings, float(numSecondaryMappings)*100/numReads)
+        print '    Reads unmapped: %d (%.2f%%)' % (counts['unmapped'], float(counts['unmapped'])*100/max(numReads, 1))
+        print '    Reads failing edit distance threshold: %d (%.2f%%)' % (counts['edit dist'], float(counts['edit dist'])*100/max(numReads, 1))
+        print '    Reads failing alignment length threshold: %d (%.2f%%)' % (counts['align len'], float(counts['align len'])*100/max(numReads, 1))
+        print '    # multiple primary mappings: %d (%.2f%%)' % (numMultiplePrimaryMappings, float(numMultiplePrimaryMappings)*100/max(numReads, 1))
+        print '    # equally good secondary mappings: %d (%.2f%%)' % (numSecondaryMappings, float(numSecondaryMappings)*100/max(numReads, 1))
 
         return readsMappedTo16S_1, readsMappedTo16S_2
 
@@ -198,11 +198,11 @@ class ClassifyBWA(object):
         
         numReads = len(readsMappedTo16S)
         print '  Number of singleton reads: %d' % numReads
-        print '    Reads unmapped: %d (%.2f%%)' % (counts['unmapped'], float(counts['unmapped'])*100/numReads)
-        print '    Reads failing edit distance threshold: %d (%.2f%%)' % (counts['edit dist'], float(counts['edit dist'])*100/numReads)
-        print '    Reads failing alignment length threshold: %d (%.2f%%)' % (counts['align len'], float(counts['align len'])*100/numReads)
-        print '    # multiple primary mappings: %d (%.2f%%)' % (numMultiplePrimaryMappings, float(numMultiplePrimaryMappings)*100/numReads)
-        print '    # equally good secondary mappings: %d (%.2f%%)' % (numSecondaryMappings, float(numSecondaryMappings)*100/numReads)
+        print '    Reads unmapped: %d (%.2f%%)' % (counts['unmapped'], float(counts['unmapped'])*100/max(numReads, 1))
+        print '    Reads failing edit distance threshold: %d (%.2f%%)' % (counts['edit dist'], float(counts['edit dist'])*100/max(numReads, 1))
+        print '    Reads failing alignment length threshold: %d (%.2f%%)' % (counts['align len'], float(counts['align len'])*100/max(numReads, 1))
+        print '    # multiple primary mappings: %d (%.2f%%)' % (numMultiplePrimaryMappings, float(numMultiplePrimaryMappings)*100/max(numReads, 1))
+        print '    # equally good secondary mappings: %d (%.2f%%)' % (numSecondaryMappings, float(numSecondaryMappings)*100/max(numReads, 1))
 
         return readsMappedTo16S
 
@@ -258,7 +258,7 @@ class ClassifyBWA(object):
 
     def run(self, projectParams, sampleParams, refDB, threads):
         # check if classification directory already exists
-        dir_path = os.path.join(projectParams['output_dir'],'classified')
+        dir_path = os.path.join(projectParams['output_dir'], 'classified')
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
         else:

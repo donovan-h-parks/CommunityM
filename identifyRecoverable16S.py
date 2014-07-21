@@ -313,9 +313,9 @@ class IdentifyRecoverable16S(object):
                     print '  Cluster ' + str(numRecoverable16S) + ': ' + ggIds[0] + ' (' + str(hits) + ' reads)'
 
                 # write out singletons
-                singletonsOut = open(outputDir + ggIds[0] + '.singletons.fasta', 'w')
-                pairOut1 = open(outputDir + ggIds[0] + '.1.fasta', 'w')
-                pairOut2 = open(outputDir + ggIds[0] + '.2.fasta', 'w')
+                singletonsOut = open(os.path.join(outputDir, ggIds[0] + '.singletons.fasta'), 'w')
+                pairOut1 = open(os.path.join(outputDir, ggIds[0] + '.1.fasta'), 'w')
+                pairOut2 = open(os.path.join(outputDir, ggIds[0] + '.2.fasta'), 'w')
 
                 for ggId in ggIds:
                     refSeqHit = referenceSeqHits[ggId]
@@ -376,8 +376,8 @@ class IdentifyRecoverable16S(object):
                 print ''
                 print sample + ':'
 
-            extractedPrefix = projectParams['output_dir'] + 'extracted/' + sample
-            classifiedPrefix = projectParams['output_dir'] + 'classified/' + sample
+            extractedPrefix = os.path.join(projectParams['output_dir'], 'extracted', sample)
+            classifiedPrefix = os.path.join(projectParams['output_dir'], 'classified' + sample)
             pairs = sampleParams[sample]['pairs']
             singles = sampleParams[sample]['singles']
 

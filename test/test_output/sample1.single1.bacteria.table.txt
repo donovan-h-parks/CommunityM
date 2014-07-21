@@ -1,5 +1,0 @@
-#                                                                                   --- full sequence ---- --- best 1 domain ---- --- domain number estimation ----
-# target name                            accession  query name           accession    E-value  score  bias   E-value  score  bias   exp reg clu  ov env dom rep inc description of target
-#                    ------------------- ---------- -------------------- ---------- --------- ------ ----- --------- ------ -----   --- --- --- --- --- --- --- --- ---------------------
-FCC0WM1ACXX_4_1101_2867_2273#TGAATCAT/1  -          bacteria             -            6.7e-27   90.5   0.0   7.2e-27   90.4   0.0   1.0   1   0   0   1   1   1   1 -
-FCC0WM1ACXX_4_1101_14994_2220#TGAATCAT/1 -          bacteria             -            3.9e-20   68.1   0.0   4.3e-20   67.9   0.0   1.0   1   0   0   1   1   1   1 -

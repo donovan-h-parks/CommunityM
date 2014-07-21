@@ -74,7 +74,7 @@ class ReadConfig(object):
         # fix output path so it is relative to executing script and ensure it exists
         configPath = configFile[0:configFile.rfind('/')+1]
 
-        projectParams['output_dir'] = configPath + projectParams['output_dir'] + '/'
+        projectParams['output_dir'] = os.path.join(configPath, projectParams['output_dir'])
         projectParams['output_dir'] = projectParams['output_dir'].replace('/./', '/') # make the paths pretty for output
         projectParams['output_dir'] = projectParams['output_dir'].replace('//', '/')
         self.validateMothurCompatibility(projectParams['output_dir'])
@@ -93,7 +93,7 @@ class ReadConfig(object):
         for sample in allSampleParams:
             pairPaths = []
             for path in allSampleParams[sample]['pairs']:
-                pathRelativeToScript = configPath + path
+                pathRelativeToScript = os.path.join(configPath, path)
                 pathRelativeToScript = pathRelativeToScript.replace('/./', '/') # make the paths pretty for output
                 pathRelativeToScript = pathRelativeToScript.replace('//', '/')
 
@@ -109,7 +109,7 @@ class ReadConfig(object):
 
             singlePaths = []
             for path in allSampleParams[sample]['singles']:
-                pathRelativeToScript = configPath + path
+                pathRelativeToScript = os.path.join(configPath, path)
                 pathRelativeToScript = pathRelativeToScript.replace('/./', '/') # make the paths pretty for output
                 pathRelativeToScript = pathRelativeToScript.replace('//', '/')
 

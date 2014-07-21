@@ -198,7 +198,7 @@ class IdentifyBinned16S(object):
         for f in files:
             if f.endswith(extension):
                 binId = f[0:f.rfind('.')]
-                for line in open(binDir + '/' + f):
+                for line in open(os.path.join(binDir, f)):
                     if line[0] == '>':
                         seqId = line[1:].split()[0].strip()
                         seqIdToBinId[seqId] = binId
@@ -210,7 +210,7 @@ class IdentifyBinned16S(object):
         # identify 16S reads from contigs/scaffolds
         print 'Identifying 16S genes on assembled contigs/scaffolds.'
         extract16S = Extract16S()
-        extract16S.hmmSearch(contigFile, evalueThreshold, threads, outputDir + '/identified16S')
+        extract16S.hmmSearch(contigFile, evalueThreshold, threads, os.path.join(outputDir, 'identified16S'))
 
         # read HMM hits
         print 'Parsing HMM results.'
@@ -218,7 +218,7 @@ class IdentifyBinned16S(object):
         for domain in ['archaea', 'bacteria', 'euk']:
             hits = {}
 
-            seqInfo = self.readHits(outputDir + '/identified16S' + '.' + domain + '.txt', domain, evalueThreshold)
+            seqInfo = self.readHits(os.path.join(outputDir, 'identified16S' + '.' + domain + '.txt'), domain, evalueThreshold)
             if len(seqInfo) > 0:
                 for seqId, seqHits in seqInfo.iteritems():
                     for hit in seqHits:
@@ -237,11 +237,11 @@ class IdentifyBinned16S(object):
 
         # write summary file and putative 16S genes to file
         print 'Writing results to file.'
-        summaryFile = outputDir + '/identified16S.tsv'
+        summaryFile = os.path.join(outputDir, '/identified16S.tsv')
         summaryOut = open(summaryFile, 'w')
         summaryOut.write('Bin Id\tSeq. Id\tHMM model\ti-Evalue\tStart hit\tEnd hit\t16S/18S gene length\tRev. Complement\tContig/Scaffold length\n')
 
-        seqFile = outputDir + '/identified16S.fna'
+        seqFile = os.path.join(outputDir, 'identified16S.fna')
         seqOut = open(seqFile, 'w')
 
         seqs = self.readFasta(contigFile)

@@ -1,4 +1,0 @@
-#                                                                                   --- full sequence ---- --- best 1 domain ---- --- domain number estimation ----
-# target name                            accession  query name           accession    E-value  score  bias   E-value  score  bias   exp reg clu  ov env dom rep inc description of target
-#                    ------------------- ---------- -------------------- ---------- --------- ------ ----- --------- ------ -----   --- --- --- --- --- --- --- --- ---------------------
-FCC0WM1ACXX_4_1101_19461_2484#TGAATCAT/1 -          archaea.revComp      -            1.3e-16   57.3   0.0   1.4e-16   57.2   0.0   1.0   1   0   0   1   1   1   1 -

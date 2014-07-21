@@ -69,8 +69,8 @@ class Classify16S(object):
         projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = True)
 
         # check if classification directory already exists
-        if not os.path.exists(projectParams['output_dir'] + 'classified'):
-            os.makedirs(projectParams['output_dir'] + 'classified')
+        if not os.path.exists(os.path.join(projectParams['output_dir'], 'classified')):
+            os.makedirs(os.path.join(projectParams['output_dir'], 'classified'))
         else:
             rtn = raw_input('Remove previously classified reads (Y or N)? ')
             if rtn.lower() == 'y' or rtn.lower() == 'yes':
@@ -92,7 +92,7 @@ class Classify16S(object):
         # create list of all sequence to classify
         mothurSeqFileList = ''
         for sample in sampleParams:
-            prefix = projectParams['output_dir'] + 'extracted/' + sample
+            prefix = os.path.join(projectParams['output_dir'], 'extracted', sample)
             pairs = sampleParams[sample]['pairs']
             singles = sampleParams[sample]['singles']
 
