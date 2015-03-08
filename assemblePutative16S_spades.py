@@ -61,13 +61,14 @@ class AssemblePutative16S(object):
         projectParams, _ = rc.readConfig(configFile, outputDirExists = True)
 
         # create directory to store putative 16S genes
-        dirPutative16S = projectParams['output_dir'] + 'putativeSSU/'
+        dirPutative16S = os.path.join(projectParams['output_dir'], 'putativeSSU')
         if not os.path.exists(dirPutative16S):
             print '[Error] Putative 16S gene reads expected in: ' + dirPutative16S
             sys.exit()
 
         # extract GreenGene Ids of putative 16S genes
         ggIds = set()
+        print dirPutative16S
         files = os.listdir(dirPutative16S)
         for f in files:
             if f.endswith('fasta'):
@@ -80,11 +81,11 @@ class AssemblePutative16S(object):
             print 'Assembling ' + str(ggId) + ': '
             print ''
 
-            pair1 = dirPutative16S + str(ggId) + '.1.fasta'
-            pair2 = dirPutative16S + str(ggId) + '.2.fasta'
-            single = dirPutative16S + str(ggId) + '.singletons.fasta'
+            pair1 = os.path.join(dirPutative16S, str(ggId) + '.1.fasta')
+            pair2 = os.path.join(dirPutative16S, str(ggId) + '.2.fasta')
+            single = os.path.join(dirPutative16S, str(ggId) + '.singletons.fasta')
 
-            outputDir = dirPutative16S + str(ggId) + '_assembly_spades'
+            outputDir = os.path.join(dirPutative16S, str(ggId) + '_assembly_spades')
             if os.path.exists(outputDir):
                 shutil.rmtree(outputDir)
 
@@ -99,18 +100,18 @@ class AssemblePutative16S(object):
             scaffoldInfo[ggId] = self.parseScaffoldInfo(outputDir)
 
         print '\n*********************************'
-        allScaffoldsFile = projectParams['output_dir'] + 'assembled_scaffolds.16S.fasta'
+        allScaffoldsFile = os.path.join(projectParams['output_dir'], 'assembled_scaffolds.16S.fasta')
         fout = open(allScaffoldsFile, 'w')
         print 'Assembly results: '
         for ggId in scaffoldInfo:
             print '  Assembly of ' + str(ggId) + ' produce ' + str(len(scaffoldInfo[ggId])) + ' scaffold(s): ' + ' '.join(scaffoldInfo[ggId])
 
-            if not os.path.isfile(dirPutative16S + str(ggId) + '_assembly_spades/scaffolds.fasta'):
+            if not os.path.isfile(os.path.join(dirPutative16S, str(ggId) + '_assembly_spades/scaffolds.fasta')):
                 print '    Failed to build scaffolds for ' + str(ggId)
                 continue
 
             index = 0
-            for line in open(dirPutative16S + str(ggId) + '_assembly_spades/scaffolds.fasta'):
+            for line in open(os.path.join(dirPutative16S, str(ggId) + '_assembly_spades/scaffolds.fasta')):
                 if line[0] == '>':
                     lineSplit = line.split('_')
                     seqLen = lineSplit[3]

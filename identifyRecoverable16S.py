@@ -35,6 +35,7 @@ import sys
 import argparse
 import operator
 import ntpath
+import random
 
 from readConfig import ReadConfig
 from seqUtils import extractSeqs
@@ -73,6 +74,10 @@ class IdentifyRecoverable16S(object):
         pass
 
     def ggIdFromTaxonomy(self, taxonomy):
+        if len(taxonomy) != 8:
+            # this should never happen, but GG isn't always perfect
+            return 'unmapped'
+        
         if '(' in taxonomy[7]:
             return taxonomy[7][4:taxonomy[7].rfind('(')]
         else:
@@ -357,7 +362,7 @@ class IdentifyRecoverable16S(object):
         neighbours = self.getNeighbours(ggRefDistFile, seqIdentityThreshold)
 
         # create directory to store putative 16S genes
-        dirPutative16S = projectParams['output_dir'] + 'putativeSSU/'
+        dirPutative16S = os.path.join(projectParams['output_dir'], 'putativeSSU')
         if not os.path.exists(dirPutative16S):
             os.makedirs(dirPutative16S)
         else:
@@ -377,7 +382,7 @@ class IdentifyRecoverable16S(object):
                 print sample + ':'
 
             extractedPrefix = os.path.join(projectParams['output_dir'], 'extracted', sample)
-            classifiedPrefix = os.path.join(projectParams['output_dir'], 'classified' + sample)
+            classifiedPrefix = os.path.join(projectParams['output_dir'], 'classified', sample)
             pairs = sampleParams[sample]['pairs']
             singles = sampleParams[sample]['singles']
 
