@@ -20,7 +20,6 @@ Many of the CommunityM scripts assume you have a set of genome bins. These can b
 The following scripts identify and classify bacterial, archaeal, and eukaryotic 16S/18S genes on contigs or scaffolds within a set of putative genome. This can often provides a refined estimate of taxonomy. To identify 16S/18S genes run:
 
 <code>
-module load communitym
 identifyBinned16S.py -t 16 -x fa ./contigs.fna ./bins ./output
 </code>
 
