@@ -57,7 +57,11 @@ class KronaBuilder:
         for row in data:
             for i in range(len(fields)-2):
                 taxonomy = row[taxonomyColumn]
-                tables[i].sampleCounts[taxonomy] = row[i+1]
+                count = float(row[i+1])
+                try:
+                    tables[i].sampleCounts[taxonomy] += count
+                except KeyError:
+                    tables[i].sampleCounts[taxonomy] = count
 
         return tables
 
@@ -73,8 +77,9 @@ class KronaBuilder:
             tempfiles.append(out)
             tempfile_paths.append(tmp)
             for taxonomy, count in table.sampleCounts.iteritems():
-                tax = "\t".join(taxonomy.split(';'))
-                out.write("%s\t%s\n" % (count,tax))
+                if count != 0:
+                    tax = "\t".join(taxonomy.split(';'))
+                    out.write("%s\t%s\n" % (count,tax))
             out.close()
 
         cmd = ["ktImportText",'-o',outputName]
