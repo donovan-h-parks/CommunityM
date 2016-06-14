@@ -35,10 +35,10 @@ import sys
 import argparse
 import operator
 import ntpath
-import random
 
 from readConfig import ReadConfig
 from seqUtils import extractSeqs
+
 
 class ReferenceSeqHit(object):
     def __init__(self, refId):
@@ -66,6 +66,7 @@ class ReferenceSeqHit(object):
             self.singles[filename] = set()
         self.singles[filename].add(queryId)
 
+
 class IdentifyRecoverable16S(object):
     def __init__(self):
         self.ggRefDist = '/srv/db/gg/2013_05/gg_13_5_otus/dist/dist_##_otus.tsv'
@@ -77,7 +78,7 @@ class IdentifyRecoverable16S(object):
         if len(taxonomy) != 8:
             # this should never happen, but GG isn't always perfect
             return 'unmapped'
-        
+
         if '(' in taxonomy[7]:
             return taxonomy[7][4:taxonomy[7].rfind('(')]
         else:
@@ -87,7 +88,7 @@ class IdentifyRecoverable16S(object):
         classifications = {}
 
         for line in open(classificationFile):
-            lineSplit = line.split()
+            lineSplit = line.split('\t')
             seqId = lineSplit[0]
             taxa = [x.strip() for x in lineSplit[1].split(';') if x.strip() != '']
 
@@ -155,12 +156,15 @@ class IdentifyRecoverable16S(object):
                     referenceSeqHits[ggId2] = referenceSeqHits.get(ggId2, ReferenceSeqHit(ggId2))
                     referenceSeqHits[ggId2].addSingleHit(pairFile2, seqId2)
 
+            if '4354278' in referenceSeqHits:
+                print 'YEP!!!'
+
         if not self.bQuiet:
             print '    Classified reads: ' + str(len(classifications1) + len(classifications2))
-            print '      Singletons: ' + str(numSingletons) + ' (%.2f' % (numSingletons*100.0/(len(classifications1) + len(classifications2))) + ')'
-            print '      Reads in pairs with similar classifications: ' + str(2*numPairsInAgreement) + ' (%.2f' % (2*numPairsInAgreement*100.0/(len(classifications1) + len(classifications2))) + ')'
-            print '      Reads in pairs with different classifications: ' + str(2*numPairsInDisagreement) + ' (%.2f' % (2*numPairsInDisagreement*100.0/(len(classifications1) + len(classifications2))) + ')'
-            print '      Unclassified/unmapped reads: ' + str(numUnclassified) + ' (%.2f' % (numUnclassified*100.0/(len(classifications1) + len(classifications2))) + ')'
+            print '      Singletons: ' + str(numSingletons) + ' (%.2f' % (numSingletons * 100.0 / (len(classifications1) + len(classifications2))) + ')'
+            print '      Reads in pairs with similar classifications: ' + str(2 * numPairsInAgreement) + ' (%.2f' % (2 * numPairsInAgreement * 100.0 / (len(classifications1) + len(classifications2))) + ')'
+            print '      Reads in pairs with different classifications: ' + str(2 * numPairsInDisagreement) + ' (%.2f' % (2 * numPairsInDisagreement * 100.0 / (len(classifications1) + len(classifications2))) + ')'
+            print '      Unclassified/unmapped reads: ' + str(numUnclassified) + ' (%.2f' % (numUnclassified * 100.0 / (len(classifications1) + len(classifications2))) + ')'
             print ''
 
     def addSingletons(self, referenceSeqHits, single, classificationFile):
@@ -231,7 +235,7 @@ class IdentifyRecoverable16S(object):
             if not self.bQuiet:
                 reportStr = '  Combining ' + str(ggIdI) + ' with ' + str(totalHits) + ' hits to: '
 
-            for j in xrange(i+1, len(sortedHits)):
+            for j in xrange(i + 1, len(sortedHits)):
                 ggIdJ = sortedHits[j][0]
                 if ggIdJ in processedIds:
                     continue
@@ -332,7 +336,7 @@ class IdentifyRecoverable16S(object):
                             singletonsOut.write(seqsInFiles[singleFile][seqId][1] + '\n')
 
                     for pairFile in sorted(list(refSeqHit.pairs)):
-                        for readId in sorted(list(refSeqHit.pairs[pairFile])): # ensure reads are in the same order for both files
+                        for readId in sorted(list(refSeqHit.pairs[pairFile])):  # ensure reads are in the same order for both files
                             seqId = readId[0:readId.rfind('/')]
                             if '/1' in readId:
                                 pairOut1.write('>' + readId + '\n')
@@ -356,7 +360,7 @@ class IdentifyRecoverable16S(object):
         self.bQuiet = bQuiet
 
         rc = ReadConfig()
-        projectParams, sampleParams = rc.readConfig(configFile, outputDirExists = True)
+        projectParams, sampleParams = rc.readConfig(configFile, outputDirExists=True)
 
         ggRefDistFile = self.ggRefDist.replace('##', str(otu))
         neighbours = self.getNeighbours(ggRefDistFile, seqIdentityThreshold)
@@ -388,7 +392,7 @@ class IdentifyRecoverable16S(object):
 
             for i in xrange(0, len(pairs), 2):
                 pair1Base = ntpath.basename(pairs[i])
-                pair2Base = ntpath.basename(pairs[i+1])
+                pair2Base = ntpath.basename(pairs[i + 1])
 
                 classificationFile1 = classifiedPrefix + '.' + pair1Base[0:pair1Base.rfind('.')] + '.intersect.16S.tsv'
                 classificationFile2 = classifiedPrefix + '.' + pair2Base[0:pair2Base.rfind('.')] + '.intersect.16S.tsv'
@@ -430,7 +434,7 @@ if __name__ == '__main__':
     parser.add_argument('config_file', help='project config file')
     parser.add_argument('otu', help='GreenGenes reference database used to classify 16S reads (choices: 94, 97, 99)', type=int, choices=[94, 97, 99])
     parser.add_argument('-i', '--seq_identity', help='sequence identity threshold for combining GreenGene hits (default = 0.03)', type=float, default=0.03)
-    parser.add_argument('-m', '--min_seqs', help='reads required to create a putative 16S gene file (default = 100).', type=int, default = 100)
+    parser.add_argument('-m', '--min_seqs', help='reads required to create a putative 16S gene file (default = 100).', type=int, default=100)
     parser.add_argument('-p', '--pairs_as_singles', help='treat paired reads with different classifications as singletons', action="store_true")
     parser.add_argument('-s', '--singletons', help='use single-ended reads and pairs with only one mapped read', action="store_true")
     parser.add_argument('-q', '--quiet', help='suppress output', action='store_true')

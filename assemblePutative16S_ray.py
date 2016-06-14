@@ -37,6 +37,7 @@ import shutil
 
 from readConfig import ReadConfig
 
+
 class AssemblePutative16S(object):
     def __init__(self):
         pass
@@ -51,10 +52,10 @@ class AssemblePutative16S(object):
 
     def run(self, configFile, threads, kmerLen, minContigLen):
         rc = ReadConfig()
-        projectParams, _ = rc.readConfig(configFile, outputDirExists = True)
+        projectParams, _ = rc.readConfig(configFile, outputDirExists=True)
 
         # create directory to store putative 16S genes
-        dirPutative16S = projectParams['output_dir'] + 'putativeSSU/'
+        dirPutative16S = os.path.join(projectParams['output_dir'], 'putativeSSU/')
         if not os.path.exists(dirPutative16S):
             print '[Error] Putative 16S gene reads expected in: ' + dirPutative16S
             sys.exit()
@@ -82,7 +83,7 @@ class AssemblePutative16S(object):
                 shutil.rmtree(outputDir)
 
             cmd = 'mpiexec -n ' + str(threads) + ' Ray -k ' + str(kmerLen) + ' -minimum-contig-length ' + str(minContigLen) + ' -o ' + outputDir
-            if os.stat(single).st_size > 0: # check if file contains any sequences
+            if os.stat(single).st_size > 0:  # check if file contains any sequences
                 cmd += ' -s ' + single
             if os.stat(pair1).st_size > 0:
                 cmd += ' -p ' + pair1 + ' ' + pair2
@@ -120,9 +121,9 @@ if __name__ == '__main__':
 
     parser.add_argument('config_file', help='project config file')
 
-    parser.add_argument('-t', '--threads', help='number of threads', type=int, default = 1)
-    parser.add_argument('-k', '--kmer_len', help='kmer length used for assembly', type=int, default = 21)
-    parser.add_argument('-m', '--min_contig_len', help='minimum contig length to retain', type=int, default = 800)
+    parser.add_argument('-t', '--threads', help='number of threads', type=int, default=1)
+    parser.add_argument('-k', '--kmer_len', help='kmer length used for assembly', type=int, default=21)
+    parser.add_argument('-m', '--min_contig_len', help='minimum contig length to retain', type=int, default=800)
     parser.add_argument('--version', help='show version number of program', action='version', version='Assemble 16S v0.0.1')
 
     args = parser.parse_args()
